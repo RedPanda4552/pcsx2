@@ -167,7 +167,7 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 		if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
 		{
 			DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-			return 0xff;
+			return 0x7f;
 		}
 		else
 		{
@@ -180,12 +180,12 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 		if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
 		{
 			DevCon.Warning("%s(%02X) Unexpected pressure request in digital mode", __FUNCTION__, cmdByte);
-			return 0xff;
+			return 0x00;
 		}
 		else if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)
 		{
 			DevCon.Warning("%s(%02X) Unexpected pressure request in config mode", __FUNCTION__, cmdByte);
-			return 0xff;
+			return 0x00;
 		}
 		else
 		{
