@@ -76,7 +76,7 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 u8 Pad::PadCommandInit(u8 port, u8 slot)
 {
-	DevCon.WriteLn("%s(%d, %d)", __FUNCTION__, port, slot);
+//	DevCon.WriteLn("%s(%d, %d)", __FUNCTION__, port, slot);
 	this->cmdBytesReceived = 1;
 	this->padCommandType = PadCommandType::NOT_SET;
 	this->currentPort = port;
@@ -179,7 +179,7 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 
 u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
-	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+//	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 	// Digital byte 1
 	if (this->cmdBytesReceived == 4)
 	{
@@ -474,10 +474,53 @@ u8 Pad::Constant2(u8 cmdByte)
 	}
 }
 
+// Expected DS2 Sequence:    00 00 04 00 00 / 00 00 06 00 00
+// Expected Guitar Sequence: 00 00 04 00 00 / 00 00 07 00 00
 u8 Pad::Constant3(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+			this->currentPS2Controller->constantStage = cmdByte;
+		case 5:
+		case 6:
+			return 0x00;
+		case 7:
+			if (!this->currentPS2Controller->constantStage)
+			{
+				return 0x04;
+			}
+			else
+			{
+				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+				{
+					return 0x06;
+				}
+				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+				{
+					return 0x07;
+				}
+				else
+				{
+					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+					return 0x00;
+				}
+			}
+		case 8:
+		case 9:
+			return 0x00;
+		default:
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			return 0x00;
+	}
 }
 u8 Pad::VibrationMap(u8 cmdByte)
 {
