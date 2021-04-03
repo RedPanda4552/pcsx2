@@ -74,7 +74,7 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 #endif
 }
 
-u8 Pad::PadCommandInit(u8 port, u8 slot) noexcept
+u8 Pad::PadCommandInit(u8 port, u8 slot)
 {
 	DevCon.WriteLn("%s(%d, %d)", __FUNCTION__, port, slot);
 	this->cmdBytesReceived = 1;
@@ -132,7 +132,7 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 	}
 }
 
-u8 Pad::ButtonQuery(u8 cmdByte) noexcept
+u8 Pad::ButtonQuery(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
@@ -244,7 +244,7 @@ u8 Pad::Config(u8 cmdByte)
 	return 0xff;
 }
 
-u8 Pad::ModeSwitch(u8 cmdByte) noexcept
+u8 Pad::ModeSwitch(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
@@ -273,30 +273,30 @@ u8 Pad::StatusInfo(u8 cmdByte)
 	}
 }
 
-u8 Pad::Constant1(u8 cmdByte) noexcept
+u8 Pad::Constant1(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
 }
 
-u8 Pad::Constant2(u8 cmdByte) noexcept
+u8 Pad::Constant2(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
 }
 
-u8 Pad::Constant3(u8 cmdByte) noexcept
+u8 Pad::Constant3(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
 }
-u8 Pad::VibrationMap(u8 cmdByte) noexcept
+u8 Pad::VibrationMap(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
 }
 
-u8 Pad::AnalogEdit(u8 cmdByte) noexcept
+u8 Pad::AnalogEdit(u8 cmdByte)
 {
 	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	return 0xff;
