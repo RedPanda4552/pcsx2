@@ -320,6 +320,13 @@ u8 Pad::ModeSwitch(u8 cmdByte)
 u8 Pad::StatusInfo(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
 	switch (this->cmdBytesReceived)
 	{
 		case 4:
