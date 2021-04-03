@@ -124,7 +124,7 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 			case PadCommandType::VIBRATION_MAP:
 				return VibrationMap(cmdByte);
 			case PadCommandType::ANALOG_EDIT:
-				return AnalogEdit(cmdByte);
+				return ResponseBytes(cmdByte);
 			default:
 				DevCon.Warning("(PAD) Second byte in PAD command (%02X) did not match any known PAD modes!", padCommandType);
 				return 0xff;
@@ -537,8 +537,38 @@ u8 Pad::VibrationMap(u8 cmdByte)
 	}
 }
 
-u8 Pad::AnalogEdit(u8 cmdByte)
+u8 Pad::ResponseBytes(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+			this->currentPS2Controller->buttonMask = cmdByte;
+			break;
+		case 5:
+			this->currentPS2Controller->buttonMask &= (cmdByte << 8);
+			break;
+		case 6:
+			this->currentPS2Controller->buttonMask &= (cmdByte << 16);
+			break;
+		case 9:
+			switch (this->currentPS2Controller->buttonMask)
+			{
+				case 0x0003ffff:
+					this->currentPS2Controller->targetPadMode = PadMode::DUALSHOCK2;
+					break;
+				case 0x3f:
+					this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
+					break;
+				case 0x03:
+					this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
+					break;
+			}
+			return 0x5a;
+		default:
+			break;
+	}
+
+	return 0x00;
 }

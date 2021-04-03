@@ -24,6 +24,10 @@ public:
 	// we are on without storing the entire command sequence, which would be
 	// useless for anything else.
 	bool constantStage = 0;
+	// A 32 bit mask used for command 0x4f to track which bits have been set
+	// on each byte that comes in. In practice we should only ever get
+	// ff ff 03 (DS2), 3f (Analog) or 03 (Digital).
+	u32 buttonMask = 0;
 #ifdef _WINDOWS
 	std::vector<Binding_Xinput*> xinputBindings;
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;

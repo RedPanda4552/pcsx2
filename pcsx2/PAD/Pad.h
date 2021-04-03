@@ -44,5 +44,5 @@ public:
 	u8 Constant2(u8 cmdByte);
 	u8 Constant3(u8 cmdByte);
 	u8 VibrationMap(u8 cmdByte);
-	u8 AnalogEdit(u8 cmdByte);
+	u8 ResponseBytes(u8 cmdByte);
 };
