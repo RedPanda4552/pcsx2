@@ -285,8 +285,36 @@ u8 Pad::Config(u8 cmdByte)
 
 u8 Pad::ModeSwitch(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+			if (cmdByte == 0x01)
+			{
+				this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
+			}
+			else if (cmdByte == 0x00)
+			{
+				this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
+			}
+			else
+			{
+				DevCon.Warning("%s(%02X) Unexpected 4th byte (%d > 1)", __FUNCTION__, cmdByte, cmdByte);
+			}
+			break;
+		case 5:
+			this->currentPS2Controller->analogLightLocked = (cmdByte == 0x03);
+			break;
+	}
+
+	return 0x00;
 }
 
 u8 Pad::StatusInfo(u8 cmdByte)
