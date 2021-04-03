@@ -524,8 +524,17 @@ u8 Pad::Constant3(u8 cmdByte)
 }
 u8 Pad::VibrationMap(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+			return 0x00;
+		case 5:
+			return 0x01;
+		default:
+			return 0xff;
+	}
 }
 
 u8 Pad::AnalogEdit(u8 cmdByte)
