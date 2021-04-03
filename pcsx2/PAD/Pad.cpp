@@ -105,6 +105,8 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 	{
 		switch (padCommandType)
 		{
+			case PadCommandType::MYSTERY:
+				return Mystery(cmdByte);
 			case PadCommandType::BUTTON_QUERY:
 				return ButtonQuery(cmdByte);
 			case PadCommandType::POLL:
@@ -129,6 +131,34 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 				DevCon.Warning("(PAD) Second byte in PAD command (%02X) did not match any known PAD modes!", padCommandType);
 				return 0xff;
 		}
+	}
+}
+
+u8 Pad::Mystery(u8 cmdByte)
+{
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+		case 5:
+			return 0x00;
+		case 6:
+			return 0x02;
+		case 7:
+		case 8:
+			return 0x00;
+		case 9:
+			return 0x5a;
+		default:
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, cmdBytesReceived);
+			return 0xff;
 	}
 }
 

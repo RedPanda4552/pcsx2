@@ -35,6 +35,7 @@ public:
 	// This will track the specific command type and execute the appropriate response payload.
 	u8 PadCommandExec(u8 cmdByte);
 
+	u8 Mystery(u8 cmdByte);
 	u8 ButtonQuery(u8 cmdByte);
 	u8 Poll(u8 cmdByte, bool skipVibration = false);
 	u8 Config(u8 cmdByte);
