@@ -1,5 +1,17 @@
 #pragma once
 
+enum class AnalogLight
+{
+	OFF = 0x00,
+	ON = 0x01
+};
+
+enum class PhysicalType
+{
+	STANDARD = 0x03,
+	GUITAR = 0x01
+};
+
 enum class PadMode
 {
 	DIGITAL = 0x41,

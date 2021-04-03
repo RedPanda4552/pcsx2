@@ -17,7 +17,7 @@
 		return 0;                                                                                                                                   \
 	}
 
-class InputInterface_Xinput : InputInterface
+class InputInterface_Xinput
 {
 private:
 	XINPUT_STATE state[XUSER_MAX_COUNT];
@@ -25,7 +25,7 @@ private:
 public:
 	InputInterface_Xinput() noexcept;
 	~InputInterface_Xinput() noexcept;
-	void Poll() noexcept override;
+	void Poll() noexcept;
 	bool GetButtonValue(DWORD xinputId, WORD buttonMask);
 	BYTE GetTriggerValue(DWORD xinputId, TriggerType triggerType);
 	SHORT GetAnalogValue(DWORD xinputId, AnalogType analogType);

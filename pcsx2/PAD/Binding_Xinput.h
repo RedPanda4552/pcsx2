@@ -12,7 +12,7 @@ private:
 	PS2Control ps2Control;
 
 public:
-	Binding_Xinput();
+	Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Control);
 	~Binding_Xinput();
 	DWORD GetXinputId() noexcept;
 	WORD GetButtonMask() noexcept;

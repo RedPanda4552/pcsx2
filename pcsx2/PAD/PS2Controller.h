@@ -10,16 +10,17 @@
 class PS2Controller
 {
 public:
-	PadMode targetPadMode;
-	PadMode currentPadMode;
+	PhysicalType physicalType = PhysicalType::STANDARD;
+	AnalogLight analogLight = AnalogLight::OFF;
+	PadMode targetPadMode = PadMode::DIGITAL;
+	PadMode currentPadMode = PadMode::DIGITAL;
 	ButtonStates buttonStates;
 	AnalogStates analogStates;
 	GuitarStates guitarStates;
-	bool analogLightEnabled = true;
 	bool analogLightLocked = false;
 #ifdef _WINDOWS
-	std::vector<Binding_Xinput> xinputBindings;
-	std::vector<Binding_WindowsKeyboard> windowsKeyboardBindings;
+	std::vector<Binding_Xinput*> xinputBindings;
+	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
 #endif
 
 	PS2Controller();

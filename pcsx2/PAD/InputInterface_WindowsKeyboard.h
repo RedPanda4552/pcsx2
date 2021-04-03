@@ -10,5 +10,5 @@ private:
 public:
 	InputInterface_WindowsKeyboard();
 	~InputInterface_WindowsKeyboard();
-	void Poll() noexcept override;
+	void Poll() noexcept;
 };

@@ -3,9 +3,11 @@
 
 #include "Binding_Xinput.h"
 
-Binding_Xinput::Binding_Xinput()
+Binding_Xinput::Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Control)
 {
-
+	this->xinputId = xinputId;
+	this->buttonMask = buttonMask;
+	this->ps2Control = ps2Control;
 }
 
 Binding_Xinput::~Binding_Xinput()

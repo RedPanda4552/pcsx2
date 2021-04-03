@@ -14,14 +14,15 @@ private:
 	InputInterface_WindowsKeyboard* inputInterface_WindowsKeyboard;
 #endif
 	PS2Controller* ps2Controllers[2][4];
+	PS2Controller* currentPS2Controller;
 	PadCommandType padCommandType = PadCommandType::NOT_SET;
 	// Number of command bytes received. This value is always current; PadCommandInit and PadCommandExec
 	// can read this value while executing and always expect this value to reflect the number of command
 	// bytes which have been received so far, including the command byte they are currently working on.
 	// Running PadCommandInit will flush this to 1, and PadCommandExec will increment this by 1 before
 	// doing anything else.
-	u8 cmdBytesReceived;
-	u8 currentPort, currentSlot;
+	u8 cmdBytesReceived = 0;
+	u8 currentPort = 0, currentSlot = 0;
 
 public:
 	Pad();
@@ -35,10 +36,10 @@ public:
 	u8 PadCommandExec(u8 cmdByte);
 
 	u8 ButtonQuery(u8 cmdByte) noexcept;
-	u8 Poll(u8 cmdByte) noexcept;
-	u8 Config(u8 cmdByte) noexcept;
+	u8 Poll(u8 cmdByte);
+	u8 Config(u8 cmdByte);
 	u8 ModeSwitch(u8 cmdByte) noexcept;
-	u8 StatusInfo(u8 cmdByte) noexcept;
+	u8 StatusInfo(u8 cmdByte);
 	u8 Constant1(u8 cmdByte) noexcept;
 	u8 Constant2(u8 cmdByte) noexcept;
 	u8 Constant3(u8 cmdByte) noexcept;
