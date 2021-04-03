@@ -138,27 +138,27 @@ u8 Pad::ButtonQuery(u8 cmdByte) noexcept
 	return 0xff;
 }
 
-u8 Pad::Poll(u8 cmdByte)
+u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 	// Digital byte 1
 	if (this->cmdBytesReceived == 4)
 	{
-		if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+		if (!skipVibration)
 		{
 			// TODO: Implement PS2Controller::SetVibration()
 		}
-		DevCon.WriteLn("%s(%02X) First Digital Byte = %02X", __FUNCTION__, cmdByte, this->currentPS2Controller->GetFirstDigitalByte());
+		
 		return this->currentPS2Controller->GetFirstDigitalByte();
 	}
 	// Digital byte 2
 	else if (this->cmdBytesReceived == 5)
 	{
-		if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+		if (!skipVibration)
 		{
 			// TODO: Implement PS2Controller::SetVibration()
 		}
-		DevCon.WriteLn("%s(%02X) Second Digital Byte = %02X", __FUNCTION__, cmdByte, this->currentPS2Controller->GetSecondDigitalByte());
+		
 		return this->currentPS2Controller->GetSecondDigitalByte();
 	}
 	// Analog bytes (6-9)
@@ -201,7 +201,6 @@ u8 Pad::Poll(u8 cmdByte)
 
 u8 Pad::Config(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
 	switch (this->cmdBytesReceived)
@@ -233,13 +232,13 @@ u8 Pad::Config(u8 cmdByte)
 			{
 				DevCon.Warning("%s(%02X) Unexpected enter/exit byte (%d > 1)", __FUNCTION__, cmdByte, cmdByte);
 			}
+			break;
 		default:
 			// Technically, the controller is not supposed to respond with pad states while in config mode. Specifically:
 			// The first 0x43 command, with byte 4 = 0x01 to signal it is entering config mode, will still return states but
 			// not set vibration. Any subsequent 0x43 commands will not return any pad states. However, there is no harm in
 			// returning them anyways, the game will simply not use them.
-			return this->Poll(cmdByte);
-
+			return this->Poll(cmdByte, true);
 	}
 
 	return 0xff;

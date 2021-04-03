@@ -36,7 +36,7 @@ public:
 	u8 PadCommandExec(u8 cmdByte);
 
 	u8 ButtonQuery(u8 cmdByte) noexcept;
-	u8 Poll(u8 cmdByte);
+	u8 Poll(u8 cmdByte, bool skipVibration = false);
 	u8 Config(u8 cmdByte);
 	u8 ModeSwitch(u8 cmdByte) noexcept;
 	u8 StatusInfo(u8 cmdByte);
