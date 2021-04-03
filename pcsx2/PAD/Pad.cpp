@@ -312,9 +312,9 @@ u8 Pad::ModeSwitch(u8 cmdByte)
 		case 5:
 			this->currentPS2Controller->analogLightLocked = (cmdByte == 0x03);
 			break;
+		default:
+			return 0x00;
 	}
-
-	return 0x00;
 }
 
 u8 Pad::StatusInfo(u8 cmdByte)
@@ -425,6 +425,9 @@ u8 Pad::Constant1(u8 cmdByte)
 			{
 				return 0x14;
 			}
+		default:
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			return 0x00;
 	}
 }
 
@@ -466,6 +469,7 @@ u8 Pad::Constant2(u8 cmdByte)
 		case 9:
 			return 0x00;
 		default:
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
 			return 0x00;
 	}
 }
