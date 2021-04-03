@@ -428,10 +428,46 @@ u8 Pad::Constant1(u8 cmdByte)
 	}
 }
 
+// Expected DS2 Sequence:    00 02 00 00 00
+// Expected Guitar Sequence: 00 02 00 01 00
 u8 Pad::Constant2(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+		case 5:
+			return 0x00;
+		case 6:
+			return 0x02;
+		case 7:
+			return 0x00;
+		case 8:
+			if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+			{
+				return 0x00;
+			}
+			else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+			{
+				return 0x01;
+			}
+			else
+			{
+				DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+				return 0x00;
+			}
+		case 9:
+			return 0x00;
+		default:
+			return 0x00;
+	}
 }
 
 u8 Pad::Constant3(u8 cmdByte)
