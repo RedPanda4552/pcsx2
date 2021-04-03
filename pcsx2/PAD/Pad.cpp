@@ -347,10 +347,85 @@ u8 Pad::StatusInfo(u8 cmdByte)
 	}
 }
 
+// Expected DS2 Sequence:    00 00 02 00 0A / 00 00 00 00 14
+// Expected Guitar Sequence: 00 01 02 00 0A / 00 01 01 01 14
 u8 Pad::Constant1(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	switch (this->cmdBytesReceived)
+	{
+		case 4:
+			this->currentPS2Controller->constantStage = cmdByte;
+		case 5:
+			return 0x00;
+		case 6:
+			if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+			{
+				return 0x00;
+			}
+			else
+			{
+				return 0x01;
+			}
+		case 7:
+			if (!this->currentPS2Controller->constantStage)
+			{
+				return 0x02;
+			}
+			else
+			{
+				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+				{
+					return 0x00;
+				}
+				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+				{
+					return 0x01;
+				}
+				else
+				{
+					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+					return 0x00;
+				}
+			}
+		case 8:
+			if (!this->currentPS2Controller->constantStage)
+			{
+				return 0x00;
+			}
+			else
+			{
+				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+				{
+					return 0x00;
+				}
+				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+				{
+					return 0x01;
+				}
+				else
+				{
+					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+					return 0x00;
+				}
+			}
+		case 9:
+			if (!this->currentPS2Controller->constantStage)
+			{
+				return 0x0A;
+			}
+			else
+			{
+				return 0x14;
+			}
+	}
 }
 
 u8 Pad::Constant2(u8 cmdByte)

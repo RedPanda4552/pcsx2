@@ -18,6 +18,12 @@ public:
 	AnalogStates analogStates;
 	GuitarStates guitarStates;
 	bool analogLightLocked = false;
+	// Used by commands 0x46 and 0x4c to remember which stage the pad is in.
+	// Each of these commands actually runs twice in sequence and returns a
+	// different payload on each run. This is a cheap way to track which run
+	// we are on without storing the entire command sequence, which would be
+	// useless for anything else.
+	bool constantStage = 0;
 #ifdef _WINDOWS
 	std::vector<Binding_Xinput*> xinputBindings;
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
