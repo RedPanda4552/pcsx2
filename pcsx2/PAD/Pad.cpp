@@ -134,8 +134,47 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 
 u8 Pad::ButtonQuery(u8 cmdByte)
 {
-	DevCon.Warning("Unimplemented: %s(%02X)", __FUNCTION__, cmdByte);
-	return 0xff;
+	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
+
+	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	{
+		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
+		return 0xff;
+	}
+
+	// last (9th) byte returned is always 0x5a
+	if (this->cmdBytesReceived == 9)
+	{
+		return 0x5a;
+	}
+
+	if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+	{
+		return 0x00;
+	}
+	else if (this->currentPS2Controller->targetPadMode == PadMode::ANALOG)
+	{
+		switch (this->cmdBytesReceived)
+		{
+			case 4:
+				return 0x3f;
+			default:
+				return 0x00;
+		}
+	}
+	else if (this->currentPS2Controller->targetPadMode == PadMode::DUALSHOCK2)
+	{
+		switch (this->cmdBytesReceived)
+		{
+			case 4:
+			case 5:
+				return 0xff;
+			case 6:
+				return 0x03;
+			default:
+				return 0x00;
+		}
+	}
 }
 
 u8 Pad::Poll(u8 cmdByte, bool skipVibration)
