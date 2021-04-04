@@ -7,6 +7,16 @@
 
 PS2Controller::PS2Controller()
 {
+	
+}
+
+PS2Controller::~PS2Controller()
+{
+
+}
+
+void PS2Controller::Debug_SetBindings()
+{
 	Binding_Xinput* up = new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_UP, PS2Control::UP);
 	Binding_Xinput* right = new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_RIGHT, PS2Control::RIGHT);
 	Binding_Xinput* down = new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_DOWN, PS2Control::DOWN);
@@ -15,6 +25,16 @@ PS2Controller::PS2Controller()
 	Binding_Xinput* circle = new Binding_Xinput(0, XINPUT_GAMEPAD_B, PS2Control::CIRCLE);
 	Binding_Xinput* cross = new Binding_Xinput(0, XINPUT_GAMEPAD_A, PS2Control::CROSS);
 	Binding_Xinput* square = new Binding_Xinput(0, XINPUT_GAMEPAD_X, PS2Control::SQUARE);
+	Binding_Xinput* start = new Binding_Xinput(0, XINPUT_GAMEPAD_START, PS2Control::START);
+	Binding_Xinput* select = new Binding_Xinput(0, XINPUT_GAMEPAD_BACK, PS2Control::SELECT);
+	Binding_Xinput* l1 = new Binding_Xinput(0, XINPUT_GAMEPAD_LEFT_SHOULDER, PS2Control::L1);
+	Binding_Xinput* l2 = new Binding_Xinput(0, TriggerType::LEFT_TRIGGER, PS2Control::L2);
+	Binding_Xinput* r1 = new Binding_Xinput(0, XINPUT_GAMEPAD_RIGHT_SHOULDER, PS2Control::R1);
+	Binding_Xinput* r2 = new Binding_Xinput(0, TriggerType::RIGHT_TRIGGER, PS2Control::R2);
+	Binding_Xinput* leftX = new Binding_Xinput(0, AnalogType::LEFT_X, PS2Control::LEFT_X);
+	Binding_Xinput* leftY = new Binding_Xinput(0, AnalogType::LEFT_Y, PS2Control::LEFT_Y);
+	Binding_Xinput* rightX = new Binding_Xinput(0, AnalogType::RIGHT_X, PS2Control::RIGHT_X);
+	Binding_Xinput* rightY = new Binding_Xinput(0, AnalogType::RIGHT_Y, PS2Control::RIGHT_Y);
 
 	this->xinputBindings.push_back(up);
 	this->xinputBindings.push_back(right);
@@ -24,13 +44,16 @@ PS2Controller::PS2Controller()
 	this->xinputBindings.push_back(circle);
 	this->xinputBindings.push_back(cross);
 	this->xinputBindings.push_back(square);
-	this->targetPadMode = PadMode::DIGITAL;
-	this->currentPadMode = this->targetPadMode;
-}
-
-PS2Controller::~PS2Controller()
-{
-
+	this->xinputBindings.push_back(start);
+	this->xinputBindings.push_back(select);
+	this->xinputBindings.push_back(l1);
+	this->xinputBindings.push_back(l2);
+	this->xinputBindings.push_back(r1);
+	this->xinputBindings.push_back(r2);
+	this->xinputBindings.push_back(leftX);
+	this->xinputBindings.push_back(leftY);
+	this->xinputBindings.push_back(rightX);
+	this->xinputBindings.push_back(rightY);
 }
 
 void PS2Controller::SetButton(PS2Control ps2Control, u8 newValue)
@@ -90,7 +113,24 @@ void PS2Controller::SetButton(PS2Control ps2Control, u8 newValue)
 
 void PS2Controller::SetAnalog(PS2Control ps2Control, u8 newValue)
 {
-
+	switch (ps2Control)
+	{
+		case PS2Control::LEFT_X:
+			this->analogStates.leftX = newValue;
+			break;
+		case PS2Control::LEFT_Y:
+			this->analogStates.leftY = newValue;
+			break;
+		case PS2Control::RIGHT_X:
+			this->analogStates.rightX = newValue;
+			break;
+		case PS2Control::RIGHT_Y:
+			this->analogStates.rightY = newValue;
+			break;
+		default:
+			DevCon.Warning("%s(%02X) called with a non-analog PS2Control (%d)", __FUNCTION__, ps2Control);
+			return;
+	}
 }
 
 u8 PS2Controller::GetFirstDigitalByte()
@@ -119,4 +159,22 @@ u8 PS2Controller::GetSecondDigitalByte()
 	ret &= ~(static_cast<bool>(this->buttonStates.cross) << 6);
 	ret &= ~(static_cast<bool>(this->buttonStates.square) << 7);
 	return ret;
+}
+
+u8 PS2Controller::GetAnalog(PS2Control ps2Control)
+{
+	switch (ps2Control)
+	{
+		case PS2Control::LEFT_X:
+			return this->analogStates.leftX;
+		case PS2Control::LEFT_Y:
+			return this->analogStates.leftY;
+		case PS2Control::RIGHT_X:
+			return this->analogStates.rightX;
+		case PS2Control::RIGHT_Y:
+			return this->analogStates.rightY;
+		default:
+			DevCon.Warning("%s(%02X) called with a non-analog PS2Control (%d)", __FUNCTION__, ps2Control);
+			return 0x7f;
+	}
 }

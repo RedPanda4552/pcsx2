@@ -16,6 +16,8 @@ Pad::Pad()
 			ps2Controllers[i][j] = new PS2Controller();
 		}
 	}
+
+	ps2Controllers[0][0]->Debug_SetBindings();
 #endif
 }
 
@@ -55,7 +57,15 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 		else if (static_cast<u8>(binding->GetAnalogType()) != 0)
 		{
 			SHORT analogValue = this->inputInterface_Xinput->GetAnalogValue(binding->GetXinputId(), binding->GetAnalogType());
-			u8 analogValueNormalized = 0x7f + (analogValue / 0xff); 
+			s32 larger = analogValue + 0x8000;
+			float f = (float)larger / 0xffff;
+			u8 analogValueNormalized = f * 0xff;
+			
+			if (binding->GetPS2Control() == PS2Control::LEFT_Y || binding->GetPS2Control() == PS2Control::RIGHT_Y)
+			{
+				analogValueNormalized = 0xff - analogValueNormalized;
+			}
+
 			ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
 		}
 	}
@@ -209,62 +219,69 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 
 u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
-//	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
-	// Digital byte 1
-	if (this->cmdBytesReceived == 4)
+	switch (this->cmdBytesReceived)
 	{
-		if (!skipVibration)
-		{
-			// TODO: Implement PS2Controller::SetVibration()
-		}
-		
-		return this->currentPS2Controller->GetFirstDigitalByte();
-	}
-	// Digital byte 2
-	else if (this->cmdBytesReceived == 5)
-	{
-		if (!skipVibration)
-		{
-			// TODO: Implement PS2Controller::SetVibration()
-		}
-		
-		return this->currentPS2Controller->GetSecondDigitalByte();
-	}
-	// Analog bytes (6-9)
-	else if (this->cmdBytesReceived <= 9)
-	{
-		if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-		{
-			DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-			return 0x7f;
-		}
-		else
-		{
-			return 0x7f; // TODO: Implement PS2Controller::GetAnalog(PS2Control)
-		}
-	}
-	// Pressure bytes (10-21)
-	else if (this->cmdBytesReceived <= 21)
-	{
-		if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-		{
-			DevCon.Warning("%s(%02X) Unexpected pressure request in digital mode", __FUNCTION__, cmdByte);
-			return 0x00;
-		}
-		else if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)
-		{
-			DevCon.Warning("%s(%02X) Unexpected pressure request in config mode", __FUNCTION__, cmdByte);
-			return 0x00;
-		}
-		else
-		{
-			return 0x00; // TODO: Implement PS2Controller::GetPressure(PS2Control)
-		}
-	}
-	else
-	{
-		DevCon.Warning("%s(%02X) Overran expected length (%d > 21)", __FUNCTION__, cmdByte, cmdBytesReceived);
-		return 0xff;
+		case 4:
+			if (!skipVibration)
+			{
+				// TODO: Implement PS2Controller::SetVibration()
+			}
+
+			return this->currentPS2Controller->GetFirstDigitalByte();
+		case 5:
+			if (!skipVibration)
+			{
+				// TODO: Implement PS2Controller::SetVibration()
+			}
+
+			return this->currentPS2Controller->GetSecondDigitalByte();
+		case 6:
+			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+			{
+				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
+				return 0x7f;
+			}
+
+			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_X);
+		case 7:
+			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+			{
+				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
+				return 0x7f;
+			}
+
+			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_Y);
+		case 8:
+			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+			{
+				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
+				return 0x7f;
+			}
+
+			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_X);
+		case 9:
+			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+			{
+				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
+				return 0x7f;
+			}
+
+			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_Y);
+		default:
+			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+			{
+				DevCon.Warning("%s(%02X) Unexpected pressure request in digital mode", __FUNCTION__, cmdByte);
+				return 0x00;
+			}
+			else if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)
+			{
+				DevCon.Warning("%s(%02X) Unexpected pressure request in config mode", __FUNCTION__, cmdByte);
+				return 0x00;
+			}
+			else
+			{
+				return 0x00; // TODO: Implement PS2Controller::GetPressure(PS2Control)
+			}
 	}
 }
 
@@ -524,25 +541,20 @@ u8 Pad::Constant3(u8 cmdByte)
 		case 6:
 			return 0x00;
 		case 7:
+			// Since documentation doesn't bother explaining this one...
+			// (thanks padtest_ps2.elf for actually sheding some light on this!)
+			// This byte, on each run of the command, specifies one of the controller's operating modes.
+			// So far we know that (of the ones that actually matter) 0x04 = digital, 0x07 = analog.
+			// This seems to correspond with assertions which are made about the "pad modes" being
+			// 0x41 = digital, 0x73 = analog, 0x79 = dualshock 2. It does leave the question of if these
+			// "constant" commands should also have a value somewhere for the second nibble of the pad mode...
 			if (!this->currentPS2Controller->constantStage)
 			{
 				return 0x04;
 			}
 			else
 			{
-				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
-				{
-					return 0x06;
-				}
-				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
-				{
-					return 0x07;
-				}
-				else
-				{
-					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
-					return 0x00;
-				}
+				return 0x07;
 			}
 		case 8:
 		case 9:

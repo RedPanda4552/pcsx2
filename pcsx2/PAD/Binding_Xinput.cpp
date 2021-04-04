@@ -10,6 +10,20 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Co
 	this->ps2Control = ps2Control;
 }
 
+Binding_Xinput::Binding_Xinput(DWORD xinputId, AnalogType analogType, PS2Control ps2Control)
+{
+	this->xinputId = xinputId;
+	this->analogType = analogType;
+	this->ps2Control = ps2Control;
+}
+
+Binding_Xinput::Binding_Xinput(DWORD xinputId, TriggerType triggerType, PS2Control ps2Control)
+{
+	this->xinputId = xinputId;
+	this->triggerType = triggerType;
+	this->ps2Control = ps2Control;
+}
+
 Binding_Xinput::~Binding_Xinput()
 {
 

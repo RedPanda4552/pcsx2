@@ -23,6 +23,7 @@ enum class PadMode
 enum class PadCommandType
 {
 	NOT_SET = 0x00,
+	MYSTERY = 0x40,
 	BUTTON_QUERY = 0x41,
 	POLL = 0x42,
 	CONFIG = 0x43,
@@ -41,6 +42,10 @@ enum class TriggerType
 	RIGHT_TRIGGER = 0x02
 };
 
+// Intended for expressing the analog type of a controller connected to
+// the host PC. For example, we would use this when setting up an Xinput
+// binding relationship between the Xinput's AnalogType::LEFT_X, and the
+// PS2's PS2Control::LEFT_X.
 enum class AnalogType
 {
 	LEFT_X = 0x01,

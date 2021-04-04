@@ -35,8 +35,10 @@ public:
 
 	PS2Controller();
 	~PS2Controller();
+	void Debug_SetBindings();
 	void SetButton(PS2Control ps2Control, u8 newValue);
 	void SetAnalog(PS2Control ps2Control, u8 newValue);
 	u8 GetFirstDigitalByte();
 	u8 GetSecondDigitalByte();
+	u8 GetAnalog(PS2Control ps2Control);
 };
