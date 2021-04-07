@@ -345,10 +345,12 @@ u8 Pad::ModeSwitch(u8 cmdByte)
 		case 4:
 			if (cmdByte == 0x01)
 			{
+				this->currentPS2Controller->analogLight = AnalogLight::ON;
 				this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
 			}
 			else if (cmdByte == 0x00)
 			{
+				this->currentPS2Controller->analogLight = AnalogLight::OFF;
 				this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
 			}
 			else
@@ -598,12 +600,15 @@ u8 Pad::ResponseBytes(u8 cmdByte)
 			switch (this->currentPS2Controller->buttonMask)
 			{
 				case 0x0003ffff:
+					this->currentPS2Controller->analogLight = AnalogLight::ON;
 					this->currentPS2Controller->targetPadMode = PadMode::DUALSHOCK2;
 					break;
 				case 0x3f:
+					this->currentPS2Controller->analogLight = AnalogLight::ON;
 					this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
 					break;
 				case 0x03:
+					this->currentPS2Controller->analogLight = AnalogLight::OFF;
 					this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
 					break;
 			}
