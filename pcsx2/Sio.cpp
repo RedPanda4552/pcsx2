@@ -20,17 +20,13 @@
 #include "ConsoleLogger.h"
 #include "Sio.h"
 #include "sio_internal.h"
-#ifdef _WIN32
-#include "PAD/Windows/PAD.h"
-#else
-#include "PAD/Linux/PAD.h"
-#endif
 
 #ifndef DISABLE_RECORDING
 #	include "Recording/InputRecording.h"
 #endif
 
 _sio sio;
+Pad* pad;
 _mcd mcds[2][4];
 _mcd *mcd;
 
@@ -211,11 +207,11 @@ SIO_WRITE sioWriteController(u8 data)
 		byteCnt = 0; //hope this gets only cleared on the first byte...
 		SIO_STAT_READY();
 		DEVICE_PLUGGED();
-		sio.buf[0] = PADstartPoll(sio.port + 1);
+		sio.buf[0] = pad->PadCommandInit(sio.port, *sio.slot); //PADstartPoll(sio.port + 1);
 		break;
 
 	default:
-		sio.buf[sio.bufCount] = PADpoll(data);
+		sio.buf[sio.bufCount] = pad->PadCommandExec(data); //PADpoll(data);
 #ifndef DISABLE_RECORDING
 		if (g_Conf->EmuOptions.EnableRecordingTools)
 		{
@@ -294,10 +290,10 @@ SIO_WRITE sioWriteMultitap(u8 data)
 		case 0x21:
 			{
 				sio.slot[sio.port] = data;
-
-				u32 ret = PADsetSlot(sio.port+1, data+1);
-				sio.buf[5] = ret? data : 0xFF;
-				sio.buf[6] = ret? 0x5A : 0x66;
+// WTF is this witchcraft? We'll have to review multitap protocol later...
+//				u32 ret = PADsetSlot(sio.port+1, data+1);
+				sio.buf[5] = /* ret? data : */ 0xFF;
+				sio.buf[6] = /* ret? 0x5A : */ 0x66;
 			}
 			break;
 

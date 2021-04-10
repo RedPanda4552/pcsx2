@@ -6,6 +6,9 @@
 #include "InputInterface_Xinput.h"
 #include "InputInterface_WindowsKeyboard.h"
 
+#define MAX_PORTS 2
+#define MAX_SLOTS 4
+
 #define ReturnPressure(ps2Control)                                                                     \
 	if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)                                 \
 	{                                                                                                  \
@@ -29,7 +32,7 @@ private:
 	InputInterface_Xinput* inputInterface_Xinput;
 	InputInterface_WindowsKeyboard* inputInterface_WindowsKeyboard;
 #endif
-	PS2Controller* ps2Controllers[2][4];
+	PS2Controller* ps2Controllers[MAX_PORTS][MAX_SLOTS];
 	PS2Controller* currentPS2Controller;
 	PadCommandType padCommandType = PadCommandType::NOT_SET;
 	// Number of command bytes received. This value is always current; PadCommandInit and PadCommandExec

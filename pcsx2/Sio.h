@@ -16,6 +16,7 @@
 #pragma once
 
 #include "MemoryCardFile.h"
+#include "PAD/Pad.h"
 
 struct _mcd
 {
@@ -113,6 +114,7 @@ struct _sio
 };
 
 extern _sio sio;
+extern Pad* pad;
 extern _mcd mcds[2][4];
 extern _mcd *mcd;
 

@@ -9,9 +9,9 @@ Pad::Pad()
 	this->inputInterface_Xinput = new InputInterface_Xinput();
 	this->inputInterface_WindowsKeyboard = new InputInterface_WindowsKeyboard();
 
-	for (size_t i = 0; i < 2; i++)
+	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
-		for (size_t j = 0; j < 4; j++)
+		for (size_t j = 0; j < MAX_SLOTS; j++)
 		{
 			ps2Controllers[i][j] = new PS2Controller();
 		}
@@ -27,6 +27,14 @@ Pad::~Pad()
 	delete this->inputInterface_Xinput;
 	delete this->inputInterface_WindowsKeyboard;
 #endif
+
+	for (size_t i = 0; i < MAX_PORTS; i++)
+	{
+		for (size_t j = 0; j < MAX_SLOTS; j++)
+		{
+			delete ps2Controllers[i][j];
+		}
+	}
 }
 
 // FIXME: This should really be a PS2Controller member.
