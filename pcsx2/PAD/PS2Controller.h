@@ -26,7 +26,9 @@ public:
 	bool constantStage = 0;
 	// A 32 bit mask used for command 0x4f to track which bits have been set
 	// on each byte that comes in. In practice we should only ever get
-	// ff ff 03 (DS2), 3f (Analog) or 03 (Digital).
+	// ff ff 03 (DS2), 3f (Analog) or 03 (Digital). This is only used temporarily
+	// during commands and, while it is never cleared out, should not be relied
+	// on for reporting the mode of the pad.
 	u32 buttonMask = 0;
 #ifdef _WINDOWS
 	std::vector<Binding_Xinput*> xinputBindings;
@@ -40,5 +42,6 @@ public:
 	void SetAnalog(PS2Control ps2Control, u8 newValue);
 	u8 GetFirstDigitalByte();
 	u8 GetSecondDigitalByte();
+	u8 GetButton(PS2Control ps2Control);
 	u8 GetAnalog(PS2Control ps2Control);
 };

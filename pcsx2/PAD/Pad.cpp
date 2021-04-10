@@ -267,21 +267,35 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 			}
 
 			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_Y);
+		// TODO: Optimization, rather than switch-case on this entire thing, we should assign values to PS2Control members
+		// and just send whatever cmdBytesReceived is.
+		case 10:
+			ReturnPressure(PS2Control::RIGHT);
+		case 11:
+			ReturnPressure(PS2Control::LEFT);
+		case 12:
+			ReturnPressure(PS2Control::UP);
+		case 13:
+			ReturnPressure(PS2Control::DOWN);
+		case 14:
+			ReturnPressure(PS2Control::TRIANGLE);
+		case 15:
+			ReturnPressure(PS2Control::CIRCLE);
+		case 16:
+			ReturnPressure(PS2Control::CROSS);
+		case 17:
+			ReturnPressure(PS2Control::SQUARE);
+		case 18:
+			ReturnPressure(PS2Control::L1);
+		case 19:
+			ReturnPressure(PS2Control::R1);
+		case 20:
+			ReturnPressure(PS2Control::L2);
+		case 21:
+			ReturnPressure(PS2Control::R2);
 		default:
-			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-			{
-				DevCon.Warning("%s(%02X) Unexpected pressure request in digital mode", __FUNCTION__, cmdByte);
-				return 0x00;
-			}
-			else if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)
-			{
-				DevCon.Warning("%s(%02X) Unexpected pressure request in config mode", __FUNCTION__, cmdByte);
-				return 0x00;
-			}
-			else
-			{
-				return 0x00; // TODO: Implement PS2Controller::GetPressure(PS2Control)
-			}
+			DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			return 0x00;
 	}
 }
 
@@ -591,10 +605,10 @@ u8 Pad::ResponseBytes(u8 cmdByte)
 			this->currentPS2Controller->buttonMask = cmdByte;
 			break;
 		case 5:
-			this->currentPS2Controller->buttonMask &= (cmdByte << 8);
+			this->currentPS2Controller->buttonMask |= (cmdByte << 8);
 			break;
 		case 6:
-			this->currentPS2Controller->buttonMask &= (cmdByte << 16);
+			this->currentPS2Controller->buttonMask |= (cmdByte << 16);
 			break;
 		case 9:
 			switch (this->currentPS2Controller->buttonMask)

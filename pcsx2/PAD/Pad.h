@@ -6,6 +6,22 @@
 #include "InputInterface_Xinput.h"
 #include "InputInterface_WindowsKeyboard.h"
 
+#define ReturnPressure(ps2Control)                                                                     \
+	if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)                                 \
+	{                                                                                                  \
+		DevCon.Warning("%s(%02X) Unexpected pressure request in digital mode", __FUNCTION__, cmdByte); \
+		return 0x00;                                                                                   \
+	}                                                                                                  \
+	else if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)                            \
+	{                                                                                                  \
+		DevCon.Warning("%s(%02X) Unexpected pressure request in config mode", __FUNCTION__, cmdByte);  \
+		return 0x00;                                                                                   \
+	}                                                                                                  \
+	else                                                                                               \
+	{                                                                                                  \
+		return this->currentPS2Controller->GetButton(ps2Control);                                      \
+	} 
+
 class Pad
 {
 private:

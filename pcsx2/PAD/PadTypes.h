@@ -38,6 +38,7 @@ enum class PadCommandType
 
 enum class TriggerType
 {
+	NONE = 0x00,
 	LEFT_TRIGGER = 0x01,
 	RIGHT_TRIGGER = 0x02
 };
@@ -48,6 +49,7 @@ enum class TriggerType
 // PS2's PS2Control::LEFT_X.
 enum class AnalogType
 {
+	NONE = 0x00,
 	LEFT_X = 0x01,
 	LEFT_Y = 0x02,
 	RIGHT_X = 0x10,

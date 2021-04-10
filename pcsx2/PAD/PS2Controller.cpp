@@ -161,6 +161,40 @@ u8 PS2Controller::GetSecondDigitalByte()
 	return ret;
 }
 
+u8 PS2Controller::GetButton(PS2Control ps2Control)
+{
+	switch (ps2Control)
+	{
+		case PS2Control::RIGHT:
+			return this->buttonStates.right;
+		case PS2Control::LEFT:
+			return this->buttonStates.left;
+		case PS2Control::UP:
+			return this->buttonStates.up;
+		case PS2Control::DOWN:
+			return this->buttonStates.down;
+		case PS2Control::TRIANGLE:
+			return this->buttonStates.triangle;
+		case PS2Control::CIRCLE:
+			return this->buttonStates.circle;
+		case PS2Control::CROSS:
+			return this->buttonStates.cross;
+		case PS2Control::SQUARE:
+			return this->buttonStates.square;
+		case PS2Control::L1:
+			return this->buttonStates.L1;
+		case PS2Control::R1:
+			return this->buttonStates.R1;
+		case PS2Control::L2:
+			return this->buttonStates.L2;
+		case PS2Control::R2:
+			return this->buttonStates.R2;
+		default:
+			DevCon.Warning("%s(%02X) called with a non-pressure PS2Control (%d)", __FUNCTION__, ps2Control);
+			return 0x7f;
+	}
+}
+
 u8 PS2Controller::GetAnalog(PS2Control ps2Control)
 {
 	switch (ps2Control)
