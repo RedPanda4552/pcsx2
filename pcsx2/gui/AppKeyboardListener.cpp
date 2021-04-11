@@ -65,6 +65,11 @@ void AppKeyboardListener::PollKeyStates()
 
 void AppKeyboardListener::PushKeyEvent(u32 key, u32 event)
 {
+	if (!this->allowQueuing)
+	{
+		return;
+	}
+
 	KeyEvent* newEvent = new KeyEvent();
 	newEvent->key = key;
 	newEvent->evt = event;
@@ -85,4 +90,9 @@ keyEvent* AppKeyboardListener::PopKeyEvent()
 	ret.evt = queuedEvent->evt;
 	delete queuedEvent; 
 	return &ret;
+}
+
+void AppKeyboardListener::SetAllowQueuing(bool newValue)
+{
+	this->allowQueuing = newValue;
 }

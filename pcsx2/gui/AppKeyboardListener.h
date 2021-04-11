@@ -38,6 +38,7 @@ private:
 
 #endif
 	std::queue<KeyEvent*>* queue;
+	bool allowQueuing = false;
 
 public:
 	AppKeyboardListener();
@@ -45,4 +46,5 @@ public:
 	void PollKeyStates();
 	void PushKeyEvent(u32 key, u32 event);
 	keyEvent* PopKeyEvent();
+	void SetAllowQueuing(bool newValue);
 };

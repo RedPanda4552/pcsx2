@@ -477,6 +477,7 @@ void GSPanel::OnFocus( wxFocusEvent& evt )
 	//Console.Warning("GS frame > focus set");
 
 	UpdateScreensaver();
+	wxGetApp().appKeyboardListener->SetAllowQueuing(true);
 }
 
 void GSPanel::OnFocusLost( wxFocusEvent& evt )
@@ -495,6 +496,7 @@ void GSPanel::OnFocusLost( wxFocusEvent& evt )
 	//Console.Warning("GS frame > focus lost");
 
 	UpdateScreensaver();
+	wxGetApp().appKeyboardListener->SetAllowQueuing(false);
 }
 
 void GSPanel::CoreThread_OnResumed()
