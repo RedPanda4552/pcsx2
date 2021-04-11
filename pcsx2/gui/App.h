@@ -25,6 +25,7 @@
 
 #include "AppCommon.h"
 #include "AppCoreThread.h"
+#include "AppKeyboardListener.h"
 #include "RecentIsoList.h"
 #include "DriveList.h"
 
@@ -524,6 +525,7 @@ protected:
 	Threading::Mutex m_mtx_LoadingGameDB;
 
 public:
+	AppKeyboardListener* appKeyboardListener;
 	FramerateManager FpsManager;
 	std::unique_ptr<CommandDictionary> GlobalCommands;
 	std::unique_ptr<AcceleratorDictionary> GlobalAccels;

@@ -754,7 +754,7 @@ Pcsx2App::Pcsx2App()
 Pcsx2App::~Pcsx2App()
 {
 	pxDoAssert = pxAssertImpl_LogIt;
-	delete appKeyboardListener;
+	
 	try
 	{
 		vu1Thread.Cancel();

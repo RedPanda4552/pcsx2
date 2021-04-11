@@ -21,11 +21,6 @@
 #include "AppSaveStates.h"
 #include "AppGameDatabase.h"
 #include "AppAccelerators.h"
-#ifdef _WIN32
-#include "PAD/Windows/PAD.h"
-#else
-#include "PAD/Linux/PAD.h"
-#endif
 
 #include "Plugins.h"
 #include "ps2/BiosTools.h"
@@ -575,13 +570,9 @@ void Pcsx2App::LogicalVsync()
 	}
 
 	renderswitch_delay >>= 1;
+	appKeyboardListener->PollKeyStates();
 
-	// Only call PADupdate here if we're using GSopen2.  Legacy GSopen plugins have the
-	// GS window belonging to the MTGS thread.
-	if( (GSopen2 != NULL) && (wxGetApp().GetGsFramePtr() != NULL) )
-		PADupdate(0);
-
-	while( const keyEvent* ev = PADkeyEvent() )
+	while( const keyEvent* ev = appKeyboardListener->PopKeyEvent() )
 	{
 		if( ev->key == 0 ) break;
 
@@ -630,7 +621,9 @@ void Pcsx2App::HandleEvent(wxEvtHandler* handler, wxEventFunction func, wxEvent&
 				// When the GSFrame CoreThread is paused, so is the logical VSync
 				// Meaning that we have to grab the user-input through here to potentially
 				// resume emulation.
-				if (const keyEvent* ev = PADkeyEvent() )
+				appKeyboardListener->PollKeyStates();
+
+				if (const keyEvent* ev = appKeyboardListener->PopKeyEvent() )
 				{
 					if( ev->key != 0 )
 					{

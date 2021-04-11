@@ -290,6 +290,7 @@
     <ClCompile Include="..\..\Gif_Logger.cpp" />
     <ClCompile Include="..\..\Gif_Unit.cpp" />
     <ClCompile Include="..\..\gui\AppGameDatabase.cpp" />
+    <ClCompile Include="..\..\gui\AppKeyboardListener.cpp" />
     <ClCompile Include="..\..\gui\AppUserMode.cpp" />
     <ClCompile Include="..\..\gui\Debugger\BreakpointWindow.cpp" />
     <ClCompile Include="..\..\gui\Debugger\CtrlDisassemblyView.cpp" />
@@ -642,6 +643,7 @@
     <ClInclude Include="..\..\GameDatabase.h" />
     <ClInclude Include="..\..\Gif_Unit.h" />
     <ClInclude Include="..\..\gui\AppGameDatabase.h" />
+    <ClInclude Include="..\..\gui\AppKeyboardListener.h" />
     <ClInclude Include="..\..\gui\DriveList.h" />
     <ClInclude Include="..\..\gui\Saveslots.h" />
     <ClInclude Include="..\..\gui\Debugger\BreakpointWindow.h" />

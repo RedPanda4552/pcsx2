@@ -1279,6 +1279,9 @@
     <ClCompile Include="..\..\PAD\Binding_WindowsKeyboard.cpp">
       <Filter>System\Ps2\PAD</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\gui\AppKeyboardListener.cpp">
+      <Filter>AppHost</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
@@ -2012,6 +2015,9 @@
     </ClInclude>
     <ClInclude Include="..\..\PAD\PadTypes.h">
       <Filter>System\Ps2\PAD</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\gui\AppKeyboardListener.h">
+      <Filter>AppHost\Include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
