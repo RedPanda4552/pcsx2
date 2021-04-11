@@ -40,42 +40,7 @@ Pad::~Pad()
 void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 {
 #ifdef _WINDOWS
-	const size_t xinputSize = ps2Controller->xinputBindings.size();
-
-	if (xinputSize > 0)
-	{
-		this->inputInterface_Xinput->Poll();
-	}
-
-	for (size_t i = 0; i < xinputSize; i++)
-	{
-		Binding_Xinput* binding = ps2Controller->xinputBindings.at(i);
-		
-		if (binding->GetButtonMask() != 0)
-		{
-			bool buttonValue = this->inputInterface_Xinput->GetButtonValue(binding->GetXinputId(), binding->GetButtonMask());
-			ps2Controller->SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
-		}
-		else if (static_cast<u8>(binding->GetTriggerType()) != 0)
-		{
-			BYTE triggerValue = this->inputInterface_Xinput->GetTriggerValue(binding->GetXinputId(), binding->GetTriggerType());
-			ps2Controller->SetButton(binding->GetPS2Control(), triggerValue);
-		}
-		else if (static_cast<u8>(binding->GetAnalogType()) != 0)
-		{
-			SHORT analogValue = this->inputInterface_Xinput->GetAnalogValue(binding->GetXinputId(), binding->GetAnalogType());
-			s32 larger = analogValue + 0x8000;
-			float f = (float)larger / 0xffff;
-			u8 analogValueNormalized = f * 0xff;
-			
-			if (binding->GetPS2Control() == PS2Control::LEFT_Y || binding->GetPS2Control() == PS2Control::RIGHT_Y)
-			{
-				analogValueNormalized = 0xff - analogValueNormalized;
-			}
-
-			ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
-		}
-	}
+	this->inputInterface_Xinput->Poll(ps2Controller);
 
 	const size_t winKeySize = ps2Controller->windowsKeyboardBindings.size();
 
@@ -230,14 +195,15 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 		case 4:
 			if (!skipVibration)
 			{
-				// TODO: Implement PS2Controller::SetVibration()
+				// If less than 0xff, flush to zero (only 0xff enables small motor)
+				this->currentPS2Controller->SetVibration(VibrationMotor::SMALL, cmdByte < 0xff ? 0 : cmdByte);
 			}
 
 			return this->currentPS2Controller->GetFirstDigitalByte();
 		case 5:
 			if (!skipVibration)
 			{
-				// TODO: Implement PS2Controller::SetVibration()
+				this->currentPS2Controller->SetVibration(VibrationMotor::LARGE, cmdByte);
 			}
 
 			return this->currentPS2Controller->GetSecondDigitalByte();

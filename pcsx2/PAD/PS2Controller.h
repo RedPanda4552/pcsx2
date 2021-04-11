@@ -17,6 +17,7 @@ public:
 	ButtonStates buttonStates;
 	AnalogStates analogStates;
 	GuitarStates guitarStates;
+	VibrationStates vibrationStates;
 	bool analogLightLocked = false;
 	// Used by commands 0x46 and 0x4c to remember which stage the pad is in.
 	// Each of these commands actually runs twice in sequence and returns a
@@ -34,6 +35,7 @@ public:
 	std::vector<Binding_Xinput*> xinputBindings;
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
 #endif
+
 	PS2Controller();
 	~PS2Controller();
 	void Debug_SetBindings();
@@ -43,4 +45,5 @@ public:
 	u8 GetSecondDigitalByte();
 	u8 GetButton(PS2Control ps2Control);
 	u8 GetAnalog(PS2Control ps2Control);
+	void SetVibration(VibrationMotor ps2VibrationMotor, u8 strength);
 };

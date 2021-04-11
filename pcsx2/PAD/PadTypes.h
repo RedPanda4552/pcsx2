@@ -56,8 +56,16 @@ enum class AnalogType
 	RIGHT_Y = 0x20
 };
 
+enum class VibrationMotor
+{
+	NONE = 0xff,
+	SMALL = 0x00,
+	LARGE = 0x01
+};
+
 enum class PS2Control
 {
+	NONE = 0xff,
 	SELECT,
 	L3,
 	R3,
@@ -123,4 +131,10 @@ struct GuitarStates
 	u8 select = 0x7f;
 	u8 start = 0x7f;
 	u8 wammy = 0x7f;
+};
+
+struct VibrationStates
+{
+	bool smallMotor = false;
+	u8 largeMotor = 0;
 };

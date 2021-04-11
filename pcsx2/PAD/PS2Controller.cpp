@@ -35,6 +35,8 @@ void PS2Controller::Debug_SetBindings()
 	Binding_Xinput* leftY = new Binding_Xinput(0, AnalogType::LEFT_Y, PS2Control::LEFT_Y);
 	Binding_Xinput* rightX = new Binding_Xinput(0, AnalogType::RIGHT_X, PS2Control::RIGHT_X);
 	Binding_Xinput* rightY = new Binding_Xinput(0, AnalogType::RIGHT_Y, PS2Control::RIGHT_Y);
+	Binding_Xinput* smallVib = new Binding_Xinput(0, VibrationMotor::SMALL, VibrationMotor::SMALL);
+	Binding_Xinput* largeVib = new Binding_Xinput(0, VibrationMotor::LARGE, VibrationMotor::LARGE);
 
 	this->xinputBindings.push_back(up);
 	this->xinputBindings.push_back(right);
@@ -54,6 +56,8 @@ void PS2Controller::Debug_SetBindings()
 	this->xinputBindings.push_back(leftY);
 	this->xinputBindings.push_back(rightX);
 	this->xinputBindings.push_back(rightY);
+	this->xinputBindings.push_back(smallVib);
+	this->xinputBindings.push_back(largeVib);
 }
 
 void PS2Controller::SetButton(PS2Control ps2Control, u8 newValue)
@@ -210,5 +214,20 @@ u8 PS2Controller::GetAnalog(PS2Control ps2Control)
 		default:
 			DevCon.Warning("%s(%02X) called with a non-analog PS2Control (%d)", __FUNCTION__, ps2Control);
 			return 0x7f;
+	}
+}
+
+void PS2Controller::SetVibration(VibrationMotor ps2VibrationMotor, u8 strength)
+{
+	switch (ps2VibrationMotor)
+	{
+		case VibrationMotor::SMALL:
+			this->vibrationStates.smallMotor = strength;
+			break;
+		case VibrationMotor::LARGE:
+			this->vibrationStates.largeMotor = strength;
+			break;
+		default:
+			break;
 	}
 }

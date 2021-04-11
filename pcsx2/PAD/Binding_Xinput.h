@@ -10,15 +10,20 @@ private:
 	TriggerType triggerType;
 	AnalogType analogType;
 	PS2Control ps2Control;
+	VibrationMotor ps2VibrationMotor;
+	VibrationMotor xinputVibrationMotor;
 
 public:
 	Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Control);
 	Binding_Xinput(DWORD xinputId, AnalogType analogType, PS2Control ps2Control);
 	Binding_Xinput(DWORD xinputId, TriggerType triggerType, PS2Control ps2Control);
+	Binding_Xinput(DWORD xinputId, VibrationMotor ps2VibrationMotor, VibrationMotor xinputVibrationMotor);
 	~Binding_Xinput();
 	DWORD GetXinputId() noexcept;
 	WORD GetButtonMask() noexcept;
 	TriggerType GetTriggerType() noexcept;
 	AnalogType GetAnalogType() noexcept;
 	PS2Control GetPS2Control() noexcept;
+	VibrationMotor GetPS2VibrationMotor() noexcept;
+	VibrationMotor GetXinputVibrationMotor() noexcept;
 };
