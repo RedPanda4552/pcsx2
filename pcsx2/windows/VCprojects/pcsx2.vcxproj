@@ -392,6 +392,7 @@
     <ClCompile Include="..\..\USB\shared\rawinput_usb.cpp" />
     <ClCompile Include="..\..\USB\shared\ringbuffer.cpp" />
     <ClCompile Include="..\..\USB\shared\shared_usb.cpp" />
+    <ClCompile Include="..\..\USB\shared\WndProcEater.cpp" />
     <ClCompile Include="..\..\USB\usb-eyetoy\api_init_win32_eyetoy.cpp" />
     <ClCompile Include="..\..\USB\usb-eyetoy\cam-windows.cpp" />
     <ClCompile Include="..\..\USB\usb-eyetoy\jo_mpeg.cpp" />
@@ -720,6 +721,7 @@
     <ClInclude Include="..\..\USB\shared\rawinput_usb.h" />
     <ClInclude Include="..\..\USB\shared\ringbuffer.h" />
     <ClInclude Include="..\..\USB\shared\shared_usb.h" />
+    <ClInclude Include="..\..\USB\shared\WndProcEater.h" />
     <ClInclude Include="..\..\USB\usb-eyetoy\cam-windows.h" />
     <ClInclude Include="..\..\USB\usb-eyetoy\jo_mpeg.h" />
     <ClInclude Include="..\..\USB\usb-eyetoy\jpgd\jpgd.h" />

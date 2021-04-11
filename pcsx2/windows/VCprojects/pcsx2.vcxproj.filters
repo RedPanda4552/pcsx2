@@ -1282,6 +1282,9 @@
     <ClCompile Include="..\..\gui\AppKeyboardListener.cpp">
       <Filter>AppHost</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\USB\shared\WndProcEater.cpp">
+      <Filter>System\Ps2\USB\shared</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\Patch.h">
@@ -2018,6 +2021,9 @@
     </ClInclude>
     <ClInclude Include="..\..\gui\AppKeyboardListener.h">
       <Filter>AppHost\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\USB\shared\WndProcEater.h">
+      <Filter>System\Ps2\USB\shared</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
