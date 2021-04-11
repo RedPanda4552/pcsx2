@@ -34,7 +34,6 @@ public:
 	std::vector<Binding_Xinput*> xinputBindings;
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
 #endif
-
 	PS2Controller();
 	~PS2Controller();
 	void Debug_SetBindings();

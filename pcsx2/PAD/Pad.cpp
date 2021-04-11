@@ -8,6 +8,7 @@ Pad::Pad()
 #ifdef _WINDOWS
 	this->inputInterface_Xinput = new InputInterface_Xinput();
 	this->inputInterface_WindowsKeyboard = new InputInterface_WindowsKeyboard();
+#endif
 
 	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
@@ -18,7 +19,6 @@ Pad::Pad()
 	}
 
 	ps2Controllers[0][0]->Debug_SetBindings();
-#endif
 }
 
 Pad::~Pad()
@@ -37,7 +37,6 @@ Pad::~Pad()
 	}
 }
 
-// FIXME: This should really be a PS2Controller member.
 void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 {
 #ifdef _WINDOWS
@@ -94,7 +93,6 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 u8 Pad::PadCommandInit(u8 port, u8 slot)
 {
-//	DevCon.WriteLn("%s(%d, %d)", __FUNCTION__, port, slot);
 	this->cmdBytesReceived = 1;
 	this->padCommandType = PadCommandType::NOT_SET;
 	this->currentPort = port;
@@ -106,7 +104,6 @@ u8 Pad::PadCommandInit(u8 port, u8 slot)
 
 u8 Pad::PadCommandExec(u8 cmdByte)
 {
-//	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 	cmdBytesReceived++;
 
 	if (cmdBytesReceived == 2)
@@ -229,6 +226,7 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
 	switch (this->cmdBytesReceived)
 	{
+		// Digital Bytes
 		case 4:
 			if (!skipVibration)
 			{
@@ -243,64 +241,40 @@ u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 			}
 
 			return this->currentPS2Controller->GetSecondDigitalByte();
+		// Analog Axes (only requested in modes 0x73 (Analog) and 0x79 (Dualshock 2)
 		case 6:
-			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-			{
-				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-				return 0x7f;
-			}
-
 			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_X);
 		case 7:
-			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-			{
-				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-				return 0x7f;
-			}
-
 			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_Y);
 		case 8:
-			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-			{
-				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-				return 0x7f;
-			}
-
 			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_X);
 		case 9:
-			if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
-			{
-				DevCon.Warning("%s(%02X) Unexpected analog request in digital mode", __FUNCTION__, cmdByte);
-				return 0x7f;
-			}
-
 			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_Y);
-		// TODO: Optimization, rather than switch-case on this entire thing, we should assign values to PS2Control members
-		// and just send whatever cmdBytesReceived is.
+		// Pressures (only requested in mode 0x79 (Dualshock 2)
 		case 10:
-			ReturnPressure(PS2Control::RIGHT);
+			return this->currentPS2Controller->GetButton(PS2Control::RIGHT);
 		case 11:
-			ReturnPressure(PS2Control::LEFT);
+			return this->currentPS2Controller->GetButton(PS2Control::LEFT);
 		case 12:
-			ReturnPressure(PS2Control::UP);
+			return this->currentPS2Controller->GetButton(PS2Control::UP);
 		case 13:
-			ReturnPressure(PS2Control::DOWN);
+			return this->currentPS2Controller->GetButton(PS2Control::DOWN);
 		case 14:
-			ReturnPressure(PS2Control::TRIANGLE);
+			return this->currentPS2Controller->GetButton(PS2Control::TRIANGLE);
 		case 15:
-			ReturnPressure(PS2Control::CIRCLE);
+			return this->currentPS2Controller->GetButton(PS2Control::CIRCLE);
 		case 16:
-			ReturnPressure(PS2Control::CROSS);
+			return this->currentPS2Controller->GetButton(PS2Control::CROSS);
 		case 17:
-			ReturnPressure(PS2Control::SQUARE);
+			return this->currentPS2Controller->GetButton(PS2Control::SQUARE);
 		case 18:
-			ReturnPressure(PS2Control::L1);
+			return this->currentPS2Controller->GetButton(PS2Control::L1);
 		case 19:
-			ReturnPressure(PS2Control::R1);
+			return this->currentPS2Controller->GetButton(PS2Control::R1);
 		case 20:
-			ReturnPressure(PS2Control::L2);
+			return this->currentPS2Controller->GetButton(PS2Control::L2);
 		case 21:
-			ReturnPressure(PS2Control::R2);
+			return this->currentPS2Controller->GetButton(PS2Control::R2);
 		default:
 			DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
 			return 0x00;
@@ -418,8 +392,6 @@ u8 Pad::StatusInfo(u8 cmdByte)
 	}
 }
 
-// Expected DS2 Sequence:    00 00 02 00 0A / 00 00 00 00 14
-// Expected Guitar Sequence: 00 01 02 00 0A / 00 01 01 01 14
 u8 Pad::Constant1(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
@@ -502,8 +474,6 @@ u8 Pad::Constant1(u8 cmdByte)
 	}
 }
 
-// Expected DS2 Sequence:    00 02 00 00 00
-// Expected Guitar Sequence: 00 02 00 01 00
 u8 Pad::Constant2(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
@@ -545,8 +515,6 @@ u8 Pad::Constant2(u8 cmdByte)
 	}
 }
 
-// Expected DS2 Sequence:    00 00 04 00 00 / 00 00 06 00 00
-// Expected Guitar Sequence: 00 00 04 00 00 / 00 00 07 00 00
 u8 Pad::Constant3(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
