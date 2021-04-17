@@ -25,11 +25,8 @@
 #include "Utilities/pxStreams.h"
 #include "SPU2/spu2.h"
 #include "USB/USB.h"
-#ifdef _WIN32
-#include "PAD/Windows/PAD.h"
-#else
-#include "PAD/Linux/PAD.h"
-#endif
+#include "Sio.h"
+#include "PAD/Pad.h"
 
 #include "ConsoleLogger.h"
 
@@ -297,18 +294,13 @@ public:
 	virtual ~SavestateEntry_PAD() = default;
 
 	wxString GetFilename() const { return L"PAD.bin"; }
-	void FreezeIn(pxInputStream& reader) const { return PADDoFreezeIn(reader); }
+	void FreezeIn(pxInputStream& reader) const { return pad->LoadState(reader); }
 	void FreezeOut(SaveStateBase& writer) const
 	{
-		freezeData fP = {0, NULL};
-		if (PADfreeze(FREEZE_SIZE, &fP) == 0)
-		{
-			const int size = fP.size;
-			writer.PrepBlock(size);
-			PADDoFreezeOut(writer.GetBlockPtr());
-			writer.CommitBlock(size);
-		}
-		return;
+		size_t padStateSize = sizeof(PadState);
+		writer.PrepBlock(padStateSize);
+		pad->SaveState(writer.GetBlockPtr());
+		writer.CommitBlock(padStateSize);
 	}
 	bool IsRequired() const { return true; }
 };

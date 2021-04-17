@@ -49,4 +49,36 @@ public:
 	u8 Constant3(u8 cmdByte);
 	u8 VibrationMap(u8 cmdByte);
 	u8 ResponseBytes(u8 cmdByte);
+
+	void SaveState(void* dest);
+	void LoadState(pxInputStream& reader);
+};
+
+static const u32 PAD_STATE_VERSION = 0x00000006;
+
+class ControllerState
+{
+public:
+	PhysicalType physicalType;
+	AnalogLight analogLight;
+	PadMode targetPadMode;
+	PadMode currentPadMode;
+	ButtonStates buttonStates;
+	AnalogStates analogStates;
+	GuitarStates guitarStates;
+	VibrationStates vibrationStates;
+	bool analogLightLocked;
+	bool constantStage;
+	u32 buttonMask;
+};
+
+class PadState
+{
+public:
+	u32 version;
+	PadCommandType padCommandType;
+	u8 cmdBytesReceived;
+	u8 currentPort;
+	u8 currentSlot;
+	ControllerState controllerStates[MAX_PORTS][MAX_SLOTS];
 };

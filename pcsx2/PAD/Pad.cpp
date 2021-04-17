@@ -1,5 +1,7 @@
 
 #include "PrecompiledHeader.h"
+#include "PS2Edefs.h"
+#include "Utilities/pxStreams.h"
 
 #include "Pad.h"
 
@@ -574,4 +576,83 @@ u8 Pad::ResponseBytes(u8 cmdByte)
 	}
 
 	return 0x00;
+}
+
+void Pad::SaveState(void* dest)
+{
+	Console.Indent().WriteLn("Saving PAD");
+	PadState padState;
+	padState.version = PAD_STATE_VERSION;
+	padState.padCommandType = this->padCommandType;
+	padState.cmdBytesReceived = this->cmdBytesReceived;
+	padState.currentPort = this->currentPort;
+	padState.currentSlot = this->currentSlot;
+
+	for (size_t i = 0; i < MAX_PORTS; i++)
+	{
+		for (size_t j = 0; j < MAX_SLOTS; j++)
+		{
+			ControllerState controllerState;
+			PS2Controller* activeController = this->ps2Controllers[i][j];
+			controllerState.physicalType = activeController->physicalType;
+			controllerState.analogLight = activeController->analogLight;
+			controllerState.targetPadMode = activeController->targetPadMode;
+			controllerState.currentPadMode = activeController->currentPadMode;
+			controllerState.buttonStates = activeController->buttonStates;
+			controllerState.analogStates = activeController->analogStates;
+			controllerState.guitarStates = activeController->guitarStates;
+			controllerState.vibrationStates = activeController->vibrationStates;
+			controllerState.analogLightLocked = activeController->analogLightLocked;
+			controllerState.constantStage = activeController->constantStage;
+			controllerState.buttonMask = activeController->buttonMask;
+			padState.controllerStates[i][j] = controllerState;
+		}
+	}
+
+	memcpy(dest, &padState, sizeof(PadState));
+}
+
+void Pad::LoadState(pxInputStream& reader)
+{
+	Console.Indent().WriteLn("Loading PAD");
+
+	if (!reader.IsOk() || !reader.Length())
+	{
+		Console.Warning("(PAD) Something went wrong when trying to read the save state. Ignoring it and running with whatever the previous state was...");
+		return;
+	}
+
+	PadState padState;
+	reader.Read(&padState, sizeof(PadState));
+
+	if (padState.version != PAD_STATE_VERSION)
+	{
+		Console.Indent().Warning("PAD version mismatch! Expected 0x%08X, state contains 0x%08X. PAD will not be loaded.", PAD_STATE_VERSION, padState.version);
+		return;
+	}
+	
+	this->padCommandType = padState.padCommandType;
+	this->cmdBytesReceived = padState.cmdBytesReceived;
+	this->currentPort = padState.currentPort;
+	this->currentSlot = padState.currentSlot;
+
+	for (size_t i = 0; i < MAX_PORTS; i++)
+	{
+		for (size_t j = 0; j < MAX_SLOTS; j++)
+		{
+			ControllerState controllerState = padState.controllerStates[i][j];
+			PS2Controller* activeController = this->ps2Controllers[i][j];
+			activeController->physicalType = controllerState.physicalType;
+			activeController->analogLight = controllerState.analogLight;
+			activeController->targetPadMode = controllerState.targetPadMode;
+			activeController->currentPadMode = controllerState.currentPadMode;
+			activeController->buttonStates = controllerState.buttonStates;
+			activeController->analogStates = controllerState.analogStates;
+			activeController->guitarStates = controllerState.guitarStates;
+			activeController->vibrationStates = controllerState.vibrationStates;
+			activeController->analogLightLocked = controllerState.analogLightLocked;
+			activeController->constantStage = controllerState.constantStage;
+			activeController->buttonMask = controllerState.buttonMask;
+		}
+	}
 }
