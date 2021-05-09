@@ -4,6 +4,7 @@
 #include "PS2Controller.h"
 
 #include <Xinput.h>
+#include "Input/Types_Xinput.h"
 
 PS2Controller::PS2Controller()
 {
@@ -28,15 +29,15 @@ void PS2Controller::Debug_SetBindings()
 	Binding_Xinput* start = new Binding_Xinput(0, XINPUT_GAMEPAD_START, PS2Control::START);
 	Binding_Xinput* select = new Binding_Xinput(0, XINPUT_GAMEPAD_BACK, PS2Control::SELECT);
 	Binding_Xinput* l1 = new Binding_Xinput(0, XINPUT_GAMEPAD_LEFT_SHOULDER, PS2Control::L1);
-	Binding_Xinput* l2 = new Binding_Xinput(0, TriggerType::LEFT_TRIGGER, PS2Control::L2);
+	Binding_Xinput* l2 = new Binding_Xinput(0, XinputTriggerType::LEFT_TRIGGER, PS2Control::L2);
 	Binding_Xinput* r1 = new Binding_Xinput(0, XINPUT_GAMEPAD_RIGHT_SHOULDER, PS2Control::R1);
-	Binding_Xinput* r2 = new Binding_Xinput(0, TriggerType::RIGHT_TRIGGER, PS2Control::R2);
-	Binding_Xinput* leftX = new Binding_Xinput(0, AnalogType::LEFT_X, PS2Control::LEFT_X);
-	Binding_Xinput* leftY = new Binding_Xinput(0, AnalogType::LEFT_Y, PS2Control::LEFT_Y);
-	Binding_Xinput* rightX = new Binding_Xinput(0, AnalogType::RIGHT_X, PS2Control::RIGHT_X);
-	Binding_Xinput* rightY = new Binding_Xinput(0, AnalogType::RIGHT_Y, PS2Control::RIGHT_Y);
-	Binding_Xinput* smallVib = new Binding_Xinput(0, VibrationMotor::SMALL, VibrationMotor::SMALL);
-	Binding_Xinput* largeVib = new Binding_Xinput(0, VibrationMotor::LARGE, VibrationMotor::LARGE);
+	Binding_Xinput* r2 = new Binding_Xinput(0, XinputTriggerType::RIGHT_TRIGGER, PS2Control::R2);
+	Binding_Xinput* leftX = new Binding_Xinput(0, XinputAnalogType::LEFT_X, PS2Control::LEFT_X);
+	Binding_Xinput* leftY = new Binding_Xinput(0, XinputAnalogType::LEFT_Y, PS2Control::LEFT_Y);
+	Binding_Xinput* rightX = new Binding_Xinput(0, XinputAnalogType::RIGHT_X, PS2Control::RIGHT_X);
+	Binding_Xinput* rightY = new Binding_Xinput(0, XinputAnalogType::RIGHT_Y, PS2Control::RIGHT_Y);
+	Binding_Xinput* smallVib = new Binding_Xinput(0, XinputVibrationMotor::SMALL, XinputVibrationMotor::SMALL);
+	Binding_Xinput* largeVib = new Binding_Xinput(0, XinputVibrationMotor::LARGE, XinputVibrationMotor::LARGE);
 
 	this->xinputBindings.push_back(up);
 	this->xinputBindings.push_back(right);
@@ -132,7 +133,7 @@ void PS2Controller::SetAnalog(PS2Control ps2Control, u8 newValue)
 			this->analogStates.rightY = newValue;
 			break;
 		default:
-			DevCon.Warning("%s(%02X) called with a non-analog PS2Control (%d)", __FUNCTION__, ps2Control);
+			DevCon.Warning("%s(%02X, %02X) called with a non-analog PS2Control", __FUNCTION__, ps2Control, newValue);
 			return;
 	}
 }

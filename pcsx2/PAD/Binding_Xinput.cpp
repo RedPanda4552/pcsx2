@@ -7,41 +7,41 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Co
 {
 	this->xinputId = xinputId;
 	this->buttonMask = buttonMask;
-	this->analogType = AnalogType::NONE;
-	this->triggerType = TriggerType::NONE;
+	this->analogType = XinputAnalogType::NONE;
+	this->triggerType = XinputTriggerType::NONE;
 	this->ps2Control = ps2Control;
-	this->ps2VibrationMotor = VibrationMotor::NONE;
-	this->xinputVibrationMotor = VibrationMotor::NONE;
+	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
+	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
 }
 
-Binding_Xinput::Binding_Xinput(DWORD xinputId, AnalogType analogType, PS2Control ps2Control)
+Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control)
 {
 	this->xinputId = xinputId;
 	this->buttonMask = 0;
 	this->analogType = analogType;
-	this->triggerType = TriggerType::NONE;
+	this->triggerType = XinputTriggerType::NONE;
 	this->ps2Control = ps2Control;
-	this->ps2VibrationMotor = VibrationMotor::NONE;
-	this->xinputVibrationMotor = VibrationMotor::NONE;
+	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
+	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
 }
 
-Binding_Xinput::Binding_Xinput(DWORD xinputId, TriggerType triggerType, PS2Control ps2Control)
+Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control)
 {
 	this->xinputId = xinputId;
 	this->buttonMask = 0;
-	this->analogType = AnalogType::NONE;
+	this->analogType = XinputAnalogType::NONE;
 	this->triggerType = triggerType;
 	this->ps2Control = ps2Control;
-	this->ps2VibrationMotor = VibrationMotor::NONE;
-	this->xinputVibrationMotor = VibrationMotor::NONE;
+	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
+	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
 }
 
-Binding_Xinput::Binding_Xinput(DWORD xinputId, VibrationMotor ps2VibrationMotor, VibrationMotor xinputVibrationMotor)
+Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2VibrationMotor, XinputVibrationMotor xinputVibrationMotor)
 {
 	this->xinputId = xinputId;
 	this->buttonMask = 0;
-	this->analogType = AnalogType::NONE;
-	this->triggerType = TriggerType::NONE;
+	this->analogType = XinputAnalogType::NONE;
+	this->triggerType = XinputTriggerType::NONE;
 	this->ps2Control = PS2Control::NONE;
 	this->ps2VibrationMotor = ps2VibrationMotor;
 	this->xinputVibrationMotor = xinputVibrationMotor;
@@ -62,12 +62,12 @@ WORD Binding_Xinput::GetButtonMask() noexcept
 	return this->buttonMask;
 }
 
-TriggerType Binding_Xinput::GetTriggerType() noexcept
+XinputTriggerType Binding_Xinput::GetTriggerType() noexcept
 {
 	return this->triggerType;
 }
 
-AnalogType Binding_Xinput::GetAnalogType() noexcept
+XinputAnalogType Binding_Xinput::GetAnalogType() noexcept
 {
 	return this->analogType;
 }
@@ -77,12 +77,12 @@ PS2Control Binding_Xinput::GetPS2Control() noexcept
 	return this->ps2Control;
 }
 
-VibrationMotor Binding_Xinput::GetPS2VibrationMotor() noexcept
+XinputVibrationMotor Binding_Xinput::GetPS2VibrationMotor() noexcept
 {
 	return this->ps2VibrationMotor;
 }
 
-VibrationMotor Binding_Xinput::GetXinputVibrationMotor() noexcept 
+XinputVibrationMotor Binding_Xinput::GetXinputVibrationMotor() noexcept 
 {
 	return this->xinputVibrationMotor;
 }

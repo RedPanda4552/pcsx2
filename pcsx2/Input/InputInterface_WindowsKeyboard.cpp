@@ -3,6 +3,8 @@
 
 #include "InputInterface_WindowsKeyboard.h"
 
+#include "Windows.h"
+
 InputInterface_WindowsKeyboard::InputInterface_WindowsKeyboard()
 {
 	

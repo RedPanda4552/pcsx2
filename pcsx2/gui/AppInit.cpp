@@ -736,6 +736,7 @@ Pcsx2App::Pcsx2App()
 #endif
 
 	appKeyboardListener = new AppKeyboardListener();
+	inputMain = new InputMain();
 	m_PendingSaves = 0;
 	m_ScheduledTermination = false;
 	m_UseGUI = true;
@@ -755,6 +756,7 @@ Pcsx2App::~Pcsx2App()
 {
 	pxDoAssert = pxAssertImpl_LogIt;
 	delete appKeyboardListener;
+	delete inputMain;
 	try
 	{
 		vu1Thread.Cancel();

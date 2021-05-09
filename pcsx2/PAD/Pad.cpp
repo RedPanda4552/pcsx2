@@ -1,17 +1,15 @@
 
 #include "PrecompiledHeader.h"
-#include "PS2Edefs.h"
-#include "Utilities/pxStreams.h"
 
 #include "Pad.h"
 
+
+#include "Utilities/pxStreams.h"
+#include "App.h"
+#include "Input/InputEvent.h"
+
 Pad::Pad()
 {
-#ifdef _WINDOWS
-	this->inputInterface_Xinput = new InputInterface_Xinput();
-	this->inputInterface_WindowsKeyboard = new InputInterface_WindowsKeyboard();
-#endif
-
 	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
 		for (size_t j = 0; j < MAX_SLOTS; j++)
@@ -25,11 +23,6 @@ Pad::Pad()
 
 Pad::~Pad()
 {
-#ifdef _WINDOWS
-	delete this->inputInterface_Xinput;
-	delete this->inputInterface_WindowsKeyboard;
-#endif
-
 	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
 		for (size_t j = 0; j < MAX_SLOTS; j++)
@@ -41,21 +34,72 @@ Pad::~Pad()
 
 void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 {
-#ifdef _WINDOWS
-	this->inputInterface_Xinput->Poll(ps2Controller);
+	InputMain* inputMain = wxGetApp().inputMain;
 
-	const size_t winKeySize = ps2Controller->windowsKeyboardBindings.size();
+#ifdef _WIN32
+	const size_t xinputSize = ps2Controller->xinputBindings.size();
 
-	if (winKeySize > 0)
+	for (size_t i = 0; i < xinputSize; i++)
 	{
-		this->inputInterface_WindowsKeyboard->Poll();
+		Binding_Xinput* binding = ps2Controller->xinputBindings.at(i);
+
+		if (binding->GetButtonMask() != 0)
+		{
+			bool buttonValue = inputMain->inputInterface_Xinput->GetButtonValue(binding->GetXinputId(), binding->GetButtonMask());
+			ps2Controller->SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+		}
+		else if (binding->GetTriggerType() != XinputTriggerType::NONE)
+		{
+			BYTE triggerValue = inputMain->inputInterface_Xinput->GetTriggerValue(binding->GetXinputId(), binding->GetTriggerType());
+			ps2Controller->SetButton(binding->GetPS2Control(), triggerValue);
+		}
+		else if (binding->GetAnalogType() != XinputAnalogType::NONE)
+		{
+			SHORT analogValue = inputMain->inputInterface_Xinput->GetAnalogValue(binding->GetXinputId(), binding->GetAnalogType());
+			s32 larger = analogValue + 0x8000;
+			float f = (float)larger / 0xffff;
+			u8 analogValueNormalized = f * 0xff;
+
+			if (binding->GetPS2Control() == PS2Control::LEFT_Y || binding->GetPS2Control() == PS2Control::RIGHT_Y)
+			{
+				analogValueNormalized = 0xff - analogValueNormalized;
+			}
+
+			ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
+		}
+		else if (binding->GetPS2VibrationMotor() != XinputVibrationMotor::NONE)
+		{
+			if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::SMALL)
+			{
+				float f = (float)ps2Controller->vibrationStates.smallMotor / 0xff;
+				WORD vibrationNormalized = f * 0xffff;
+				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
+			}
+			else if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::LARGE)
+			{
+				float f = (float)ps2Controller->vibrationStates.largeMotor / 0xff;
+				WORD vibrationNormalized = f * 0xffff;
+				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
+			}
+		}
 	}
 
-	for (size_t i = 0; i < winKeySize; i++)
+	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
-		// TODO: Set PS2 values
+		inputMain->inputInterface_Xinput->SendVibration(i);
 	}
+		
+	// TODO: Nefarius' PS3 driver?
 #endif
+#ifdef __linux__
+	// TODO: evdev
+	// TODO: Does a POSIX keyboard lib exist?
+#endif
+#ifdef __APPLE__
+	// TODO: Does a POSIX keyboard lib exist?
+#endif
+	// TODO: HID PS4
+	// TODO: HID Switch Pro
 }
 
 u8 Pad::PadCommandInit(u8 port, u8 slot)
@@ -90,13 +134,13 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 			case PadCommandType::MYSTERY:
 				return Mystery(cmdByte);
 			case PadCommandType::BUTTON_QUERY:
-				return ButtonQuery(cmdByte);
+				return ButtonQuery(cmdByte); // TODO: Some non-return paths
 			case PadCommandType::POLL:
 				return Poll(cmdByte);
 			case PadCommandType::CONFIG:
 				return Config(cmdByte);
 			case PadCommandType::MODE_SWITCH:
-				return ModeSwitch(cmdByte);
+				return ModeSwitch(cmdByte); // TODO: Some non-return paths
 			case PadCommandType::STATUS_INFO:
 				return StatusInfo(cmdByte);
 			case PadCommandType::CONST_1:

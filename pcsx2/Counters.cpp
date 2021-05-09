@@ -472,6 +472,11 @@ static __fi void frameLimit()
 
 static __fi void VSyncStart(u32 sCycle)
 {
+	// Poll devices ahead of when the PS2 is going to actually need their inputs.
+	// TODO: is... is this actually the right place? Seems like this happens *after* the EE is done...
+	// I guess if not here we could do it on VSyncEnd?
+	wxGetApp().inputMain->PollAllDevices();
+
 #ifndef DISABLE_RECORDING
 	if (g_Conf->EmuOptions.EnableRecordingTools)
 	{

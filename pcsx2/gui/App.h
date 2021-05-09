@@ -26,6 +26,7 @@
 #include "AppCommon.h"
 #include "AppCoreThread.h"
 #include "AppKeyboardListener.h"
+#include "Input/InputMain.h"
 #include "RecentIsoList.h"
 #include "DriveList.h"
 
@@ -526,6 +527,7 @@ protected:
 
 public:
 	AppKeyboardListener* appKeyboardListener;
+	InputMain* inputMain;
 	FramerateManager FpsManager;
 	std::unique_ptr<CommandDictionary> GlobalCommands;
 	std::unique_ptr<AcceleratorDictionary> GlobalAccels;

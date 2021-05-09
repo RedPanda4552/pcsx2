@@ -2,28 +2,30 @@
 
 #include "PadTypes.h"
 
+#include "Input/Types_Xinput.h"
+
 class Binding_Xinput
 {
 private:
 	DWORD xinputId;
 	WORD buttonMask;
-	TriggerType triggerType;
-	AnalogType analogType;
+	XinputTriggerType triggerType;
+	XinputAnalogType analogType;
 	PS2Control ps2Control;
-	VibrationMotor ps2VibrationMotor;
-	VibrationMotor xinputVibrationMotor;
+	XinputVibrationMotor ps2VibrationMotor;
+	XinputVibrationMotor xinputVibrationMotor;
 
 public:
 	Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Control);
-	Binding_Xinput(DWORD xinputId, AnalogType analogType, PS2Control ps2Control);
-	Binding_Xinput(DWORD xinputId, TriggerType triggerType, PS2Control ps2Control);
-	Binding_Xinput(DWORD xinputId, VibrationMotor ps2VibrationMotor, VibrationMotor xinputVibrationMotor);
+	Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control);
+	Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control);
+	Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2VibrationMotor, XinputVibrationMotor xinputVibrationMotor);
 	~Binding_Xinput();
 	DWORD GetXinputId() noexcept;
 	WORD GetButtonMask() noexcept;
-	TriggerType GetTriggerType() noexcept;
-	AnalogType GetAnalogType() noexcept;
+	XinputTriggerType GetTriggerType() noexcept;
+	XinputAnalogType GetAnalogType() noexcept;
 	PS2Control GetPS2Control() noexcept;
-	VibrationMotor GetPS2VibrationMotor() noexcept;
-	VibrationMotor GetXinputVibrationMotor() noexcept;
+	XinputVibrationMotor GetPS2VibrationMotor() noexcept;
+	XinputVibrationMotor GetXinputVibrationMotor() noexcept;
 };

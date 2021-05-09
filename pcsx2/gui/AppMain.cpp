@@ -575,12 +575,7 @@ void Pcsx2App::LogicalVsync()
 	while( const keyEvent* ev = appKeyboardListener->PopKeyEvent() )
 	{
 		if( ev->key == 0 ) break;
-
-		// Give plugins first try to handle keys.  If none of them handles the key, it will
-		// be passed to the main user interface.
-
-		if( !GetCorePlugins().KeyEvent( *ev ) )
-			PadKeyDispatch( *ev );
+		PadKeyDispatch(*ev);
 	}
 }
 

@@ -3,8 +3,8 @@
 
 #include "PadTypes.h"
 #include "PS2Controller.h"
-#include "InputInterface_Xinput.h"
-#include "InputInterface_WindowsKeyboard.h"
+#include "Input/InputInterface_Xinput.h"
+#include "Input/InputInterface_WindowsKeyboard.h"
 
 #define MAX_PORTS 2
 #define MAX_SLOTS 4
@@ -12,10 +12,6 @@
 class Pad
 {
 private:
-#ifdef _WINDOWS
-	InputInterface_Xinput* inputInterface_Xinput;
-	InputInterface_WindowsKeyboard* inputInterface_WindowsKeyboard;
-#endif
 	PS2Controller* ps2Controllers[MAX_PORTS][MAX_SLOTS];
 	PS2Controller* currentPS2Controller;
 	PadCommandType padCommandType = PadCommandType::NOT_SET;

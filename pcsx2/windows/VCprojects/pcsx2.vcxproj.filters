@@ -223,6 +223,9 @@
     <Filter Include="System\Ps2\PAD">
       <UniqueIdentifier>{5dd3bda6-4257-45a3-80cf-86424650cbd4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Input">
+      <UniqueIdentifier>{0bd4ff22-4676-40c8-92ac-69b7e949c246}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\Utilities\folderdesc.txt">
@@ -1252,15 +1255,6 @@
     <ClCompile Include="..\..\gui\Dialogs\IPCDialog.cpp">
       <Filter>AppHost\Dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\PAD\InputInterface.cpp">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\PAD\InputInterface_WindowsKeyboard.cpp">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\PAD\InputInterface_Xinput.cpp">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\PAD\Pad.cpp">
       <Filter>System\Ps2\PAD</Filter>
     </ClCompile>
@@ -1284,6 +1278,18 @@
     </ClCompile>
     <ClCompile Include="..\..\USB\shared\WndProcEater.cpp">
       <Filter>System\Ps2\USB\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Input\InputMain.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Input\InputInterface.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Input\InputInterface_WindowsKeyboard.cpp">
+      <Filter>Input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Input\InputInterface_Xinput.cpp">
+      <Filter>Input</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1992,15 +1998,6 @@
     <ClInclude Include="..\..\USB\Win32\resource_usb.h">
       <Filter>System\Ps2\USB\Win32</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\PAD\InputInterface.h">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\PAD\InputInterface_WindowsKeyboard.h">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\PAD\InputInterface_Xinput.h">
-      <Filter>System\Ps2\PAD</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\PAD\Pad.h">
       <Filter>System\Ps2\PAD</Filter>
     </ClInclude>
@@ -2024,6 +2021,21 @@
     </ClInclude>
     <ClInclude Include="..\..\USB\shared\WndProcEater.h">
       <Filter>System\Ps2\USB\shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\InputMain.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\InputInterface.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\InputInterface_WindowsKeyboard.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\InputInterface_Xinput.h">
+      <Filter>Input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Input\Types_Xinput.h">
+      <Filter>Input</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

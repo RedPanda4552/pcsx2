@@ -23,11 +23,7 @@
 #include "System/SysThreads.h"
 #include "DEV9/DEV9.h"
 #include "USB/USB.h"
-#ifdef _WIN32
-#include "PAD/Windows/PAD.h"
-#else
-#include "PAD/Linux/PAD.h"
-#endif
+#include "PAD/Pad.h"
 
 #include "ConsoleLogger.h"
 #include "MainFrame.h"
@@ -82,7 +78,8 @@ void MainEmuFrame::Menu_USBSettings_Click(wxCommandEvent& event)
 
 void MainEmuFrame::Menu_PADSettings_Click(wxCommandEvent& event)
 {
-	PADconfigure();
+// TODO: Ok this one is kinda reasonable ok we'll have to make a member for this one 
+//	PADconfigure();
 }
 
 void MainEmuFrame::Menu_WindowSettings_Click(wxCommandEvent& event)
