@@ -6,7 +6,6 @@
 
 #include "Utilities/pxStreams.h"
 #include "App.h"
-#include "Input/InputEvent.h"
 
 Pad::Pad()
 {

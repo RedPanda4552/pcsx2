@@ -4,7 +4,6 @@
 #include "InputInterface.h"
 
 #include "Types_Xinput.h"
-#include "InputEvent.h"
 
 #include <Xinput.h>
 

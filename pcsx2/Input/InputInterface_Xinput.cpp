@@ -85,8 +85,6 @@ SHORT InputInterface_Xinput::GetAnalogValue(const DWORD xinputId, const XinputAn
 
 void InputInterface_Xinput::Poll()
 {
-	std::vector<std::unique_ptr<InputEvent>> ret;
-
 	for (size_t i = 0; i < XUSER_MAX_COUNT; i++)
 	{
 		ZeroMemory(&state[i], sizeof(XINPUT_STATE));
