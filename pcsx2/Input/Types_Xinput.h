@@ -17,10 +17,14 @@ enum class XinputTriggerType
 enum class XinputAnalogType
 {
 	NONE = 0xff,
-	LEFT_X = 0x00,
-	LEFT_Y = 0x01,
-	RIGHT_X = 0x80,
-	RIGHT_Y = 0x81
+	LEFT_X_POS = 0x00,
+	LEFT_X_NEG,
+	LEFT_Y_POS,
+	LEFT_Y_NEG,
+	RIGHT_X_POS = 0x80,
+	RIGHT_X_NEG,
+	RIGHT_Y_POS,
+	RIGHT_Y_NEG
 };
 
 enum class XinputVibrationMotor

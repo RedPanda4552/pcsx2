@@ -3,7 +3,6 @@
 
 #include "Pad.h"
 
-
 #include "Utilities/pxStreams.h"
 #include "App.h"
 
@@ -36,37 +35,78 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 	InputMain* inputMain = wxGetApp().inputMain;
 
 #ifdef _WIN32
+	// Xinput
 	const size_t xinputSize = ps2Controller->xinputBindings.size();
 
 	for (size_t i = 0; i < xinputSize; i++)
 	{
 		Binding_Xinput* binding = ps2Controller->xinputBindings.at(i);
 
+		// If the Xinput control we are mapping is a standard button
 		if (binding->GetButtonMask() != 0)
 		{
 			bool buttonValue = inputMain->inputInterface_Xinput->GetButtonValue(binding->GetXinputId(), binding->GetButtonMask());
-			ps2Controller->SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+
+			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			{
+				ps2Controller->SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+			}
+			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			{
+				ps2Controller->SetAnalog(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+			}
 		}
+		// If the Xinput control we are mapping is a trigger
 		else if (binding->GetTriggerType() != XinputTriggerType::NONE)
 		{
 			BYTE triggerValue = inputMain->inputInterface_Xinput->GetTriggerValue(binding->GetXinputId(), binding->GetTriggerType());
-			ps2Controller->SetButton(binding->GetPS2Control(), triggerValue);
+
+			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			{
+				ps2Controller->SetButton(binding->GetPS2Control(), triggerValue);
+			}
+			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			{
+				ps2Controller->SetAnalog(binding->GetPS2Control(), triggerValue);
+			}
 		}
+		// If the Xinput control we are mapping is an analog
 		else if (binding->GetAnalogType() != XinputAnalogType::NONE)
 		{
 			SHORT analogValue = inputMain->inputInterface_Xinput->GetAnalogValue(binding->GetXinputId(), binding->GetAnalogType());
-			s32 larger = analogValue + 0x8000;
-			float f = (float)larger / 0xffff;
-			u8 analogValueNormalized = f * 0xff;
+			float f = (float)analogValue / 0x7fff;
 
-			if (binding->GetPS2Control() == PS2Control::LEFT_Y || binding->GetPS2Control() == PS2Control::RIGHT_Y)
+			// If negative, invert so our scaling factor is still positive/usable.
+			if (f < 0)
 			{
-				analogValueNormalized = 0xff - analogValueNormalized;
+				f *= -1;
 			}
 
-			ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
+			// If greater than 1 (should only occur on negative component, since it reaches -32768 as opposed to the max positive 32767), ceiling at 1.
+			if (f > 1)
+			{
+				f = 1;
+			}
+
+			// Compare to deadzone, drop if lower.
+			if (f <= binding->GetDeadzone())
+			{
+				f = 0;
+			}
+
+			u8 analogValueNormalized = f * 0xff;
+
+			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			{
+				ps2Controller->SetButton(binding->GetPS2Control(), analogValueNormalized);
+			}
+			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			{
+				ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
+			}
 		}
-		else if (binding->GetPS2VibrationMotor() != XinputVibrationMotor::NONE)
+		// If the Xinput control we are mapping is a vibration motor
+		else if (binding->GetXinputVibrationMotor() != XinputVibrationMotor::NONE)
 		{
 			if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::SMALL)
 			{
@@ -82,12 +122,14 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 			}
 		}
 	}
-
+	
+	// Lastly for Xinput, send all staged vibrations at once (as opposed to sending them immediately while processing;
+	// this ensures both motors kick on at once instead of staggered depending on the order of the bindings vector).
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
 		inputMain->inputInterface_Xinput->SendVibration(i);
 	}
-		
+
 	// TODO: Nefarius' PS3 driver?
 #endif
 #ifdef __linux__
@@ -234,61 +276,46 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 
 u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
-	switch (this->cmdBytesReceived)
+	// Sanity check
+	if (this->cmdBytesReceived < 4)
 	{
-		// Digital Bytes
-		case 4:
-			if (!skipVibration)
-			{
-				// If less than 0xff, flush to zero (only 0xff enables small motor)
-				this->currentPS2Controller->SetVibration(VibrationMotor::SMALL, cmdByte < 0xff ? 0 : cmdByte);
-			}
+		pxAssert(false, "Pad::Poll invoked prematurely before 4th command byte received");
+	}
+	// Digital Byte 1
+	else if (this->cmdBytesReceived == 4)
+	{
+		if (!skipVibration)
+		{
+			// If less than 0xff, flush to zero (only 0xff enables small motor)
+			this->currentPS2Controller->SetVibration(VibrationMotor::SMALL, cmdByte < 0xff ? 0 : cmdByte);
+		}
 
-			return this->currentPS2Controller->GetFirstDigitalByte();
-		case 5:
-			if (!skipVibration)
-			{
-				this->currentPS2Controller->SetVibration(VibrationMotor::LARGE, cmdByte);
-			}
+		return this->currentPS2Controller->GetFirstDigitalByte();
+	}
+	// Digital Byte 2
+	else if (this->cmdBytesReceived == 5)
+	{
+		if (!skipVibration)
+		{
+			this->currentPS2Controller->SetVibration(VibrationMotor::LARGE, cmdByte);
+		}
 
-			return this->currentPS2Controller->GetSecondDigitalByte();
-		// Analog Axes (only requested in modes 0x73 (Analog) and 0x79 (Dualshock 2)
-		case 6:
-			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_X);
-		case 7:
-			return this->currentPS2Controller->GetAnalog(PS2Control::RIGHT_Y);
-		case 8:
-			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_X);
-		case 9:
-			return this->currentPS2Controller->GetAnalog(PS2Control::LEFT_Y);
-		// Pressures (only requested in mode 0x79 (Dualshock 2)
-		case 10:
-			return this->currentPS2Controller->GetButton(PS2Control::RIGHT);
-		case 11:
-			return this->currentPS2Controller->GetButton(PS2Control::LEFT);
-		case 12:
-			return this->currentPS2Controller->GetButton(PS2Control::UP);
-		case 13:
-			return this->currentPS2Controller->GetButton(PS2Control::DOWN);
-		case 14:
-			return this->currentPS2Controller->GetButton(PS2Control::TRIANGLE);
-		case 15:
-			return this->currentPS2Controller->GetButton(PS2Control::CIRCLE);
-		case 16:
-			return this->currentPS2Controller->GetButton(PS2Control::CROSS);
-		case 17:
-			return this->currentPS2Controller->GetButton(PS2Control::SQUARE);
-		case 18:
-			return this->currentPS2Controller->GetButton(PS2Control::L1);
-		case 19:
-			return this->currentPS2Controller->GetButton(PS2Control::R1);
-		case 20:
-			return this->currentPS2Controller->GetButton(PS2Control::L2);
-		case 21:
-			return this->currentPS2Controller->GetButton(PS2Control::R2);
-		default:
-			DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
-			return 0x00;
+		return this->currentPS2Controller->GetSecondDigitalByte();
+	}
+	// Analog Axes (only requested in modes 0x73 (Analog) and 0x79 (Dualshock 2)
+	else if (this->cmdBytesReceived <= 9)
+	{
+		return this->currentPS2Controller->GetAnalog(static_cast<PS2Control>(this->cmdBytesReceived));
+	}
+	// Pressures (only requested in mode 0x79 (Dualshock 2)
+	else if (this->cmdBytesReceived <= 21)
+	{
+		return this->currentPS2Controller->GetButton(static_cast<PS2Control>(this->cmdBytesReceived));
+	}
+	else
+	{
+		DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+		return 0x00;
 	}
 }
 

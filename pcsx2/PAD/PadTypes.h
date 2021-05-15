@@ -66,26 +66,42 @@ enum class VibrationMotor
 enum class PS2Control
 {
 	NONE = 0xff,
-	SELECT,
-	L3,
-	R3,
-	START,
-	UP,
-	RIGHT,
-	DOWN,
-	LEFT,
-	L2,
-	R2,
-	L1,
-	R1,
-	TRIANGLE,
-	CIRCLE,
-	CROSS,
-	SQUARE,
-	RIGHT_X,
-	RIGHT_Y,
-	LEFT_X,
-	LEFT_Y
+	// Buttons which were exclusively digital. Their numbering does not matter.
+	SELECT = 0x00,
+	L3 = 0x01,
+	R3 = 0x02,
+	START = 0x03,
+	// The complete axes for each analog. Their numbering lets Pad::Poll retrieve them without explicitly
+	// spelling out a return for every single individual analog axis.
+	RIGHT_X = 0x06,
+	RIGHT_Y = 0x07,
+	LEFT_X = 0x08,
+	LEFT_Y = 0x09,
+	// Buttons which supported pressure. Their numbering lets Pad::Poll retrieve them without explicitly
+	// spelling out a return for every single individual button.
+	RIGHT = 0x0a,
+	LEFT = 0x0b,
+	UP = 0x0c,
+	DOWN = 0x0d,
+	TRIANGLE = 0x0e,
+	CIRCLE = 0x0f,
+	CROSS = 0x10,
+	SQUARE = 0x11,
+	L1 = 0x12,
+	R1 = 0x13,
+	L2 = 0x14,
+	R2 = 0x15,
+	// These are not truly PS2 controls. These are the analog axes, broken into positive and negative components.
+	// Intended to simplify binding (e.g. if using keyboard keys, boolean values,
+	// a separate key is required for a positive and negative component for a single axis).
+	RIGHT_X_POS = 0x40,
+	RIGHT_X_NEG = 0x41,
+	RIGHT_Y_POS = 0x42,
+	RIGHT_Y_NEG = 0x43,
+	LEFT_X_POS = 0x80,
+	LEFT_X_NEG = 0x81,
+	LEFT_Y_POS = 0x82,
+	LEFT_Y_NEG = 0x83
 };
 
 struct ButtonStates
@@ -111,9 +127,17 @@ struct ButtonStates
 struct AnalogStates
 {
 	u8 rightX = 0x7f;
+	u8 rightXPos = 0x00;
+	u8 rightXNeg = 0x00;
 	u8 rightY = 0x7f;
+	u8 rightYPos = 0x00;
+	u8 rightYNeg = 0x00;
 	u8 leftX = 0x7f;
+	u8 leftXPos = 0x00;
+	u8 leftXNeg = 0x00;
 	u8 leftY = 0x7f;
+	u8 leftYPos = 0x00;
+	u8 leftYNeg = 0x00;
 };
 
 // Guitars are a bit unusual, u8 values are used for the non-string buttons,

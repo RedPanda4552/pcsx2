@@ -12,9 +12,10 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Co
 	this->ps2Control = ps2Control;
 	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
 	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
+	this->deadzone = 0;
 }
 
-Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control)
+Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control, float deadzone)
 {
 	this->xinputId = xinputId;
 	this->buttonMask = 0;
@@ -23,9 +24,10 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2C
 	this->ps2Control = ps2Control;
 	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
 	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
+	this->deadzone = deadzone;
 }
 
-Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control)
+Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control, float deadzone)
 {
 	this->xinputId = xinputId;
 	this->buttonMask = 0;
@@ -34,6 +36,7 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS
 	this->ps2Control = ps2Control;
 	this->ps2VibrationMotor = XinputVibrationMotor::NONE;
 	this->xinputVibrationMotor = XinputVibrationMotor::NONE;
+	this->deadzone = deadzone;
 }
 
 Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2VibrationMotor, XinputVibrationMotor xinputVibrationMotor)
@@ -45,6 +48,7 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2Vibration
 	this->ps2Control = PS2Control::NONE;
 	this->ps2VibrationMotor = ps2VibrationMotor;
 	this->xinputVibrationMotor = xinputVibrationMotor;
+	this->deadzone = 0;
 }
 
 Binding_Xinput::~Binding_Xinput()
@@ -85,4 +89,9 @@ XinputVibrationMotor Binding_Xinput::GetPS2VibrationMotor() noexcept
 XinputVibrationMotor Binding_Xinput::GetXinputVibrationMotor() noexcept 
 {
 	return this->xinputVibrationMotor;
+}
+
+float Binding_Xinput::GetDeadzone() noexcept
+{
+	return this->deadzone;
 }

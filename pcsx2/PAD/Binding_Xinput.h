@@ -14,11 +14,12 @@ private:
 	PS2Control ps2Control;
 	XinputVibrationMotor ps2VibrationMotor;
 	XinputVibrationMotor xinputVibrationMotor;
+	float deadzone;
 
 public:
 	Binding_Xinput(DWORD xinputId, WORD buttonMask, PS2Control ps2Control);
-	Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control);
-	Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control);
+	Binding_Xinput(DWORD xinputId, XinputAnalogType analogType, PS2Control ps2Control, float deadzone);
+	Binding_Xinput(DWORD xinputId, XinputTriggerType triggerType, PS2Control ps2Control, float deadzone);
 	Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2VibrationMotor, XinputVibrationMotor xinputVibrationMotor);
 	~Binding_Xinput();
 	DWORD GetXinputId() noexcept;
@@ -28,4 +29,5 @@ public:
 	PS2Control GetPS2Control() noexcept;
 	XinputVibrationMotor GetPS2VibrationMotor() noexcept;
 	XinputVibrationMotor GetXinputVibrationMotor() noexcept;
+	float GetDeadzone() noexcept;
 };

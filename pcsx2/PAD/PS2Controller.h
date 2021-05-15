@@ -36,6 +36,9 @@ public:
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
 #endif
 
+	static bool IsPS2ControlButton(PS2Control ps2Control);
+	static bool IsPS2ControlAnalog(PS2Control ps2Control);
+
 	PS2Controller();
 	~PS2Controller();
 	void Debug_SetBindings();

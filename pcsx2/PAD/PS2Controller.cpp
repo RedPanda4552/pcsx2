@@ -6,6 +6,22 @@
 #include <Xinput.h>
 #include "Input/Types_Xinput.h"
 
+// Determine if an input PS2Control is a button.
+// Used later when evaluating bindings to determine if normalization is required or not.
+bool PS2Controller::IsPS2ControlButton(PS2Control ps2Control)
+{
+	u8 value = static_cast<u8>(ps2Control);
+	return value != static_cast<u8>(PS2Control::NONE) && value < static_cast<u8>(PS2Control::RIGHT_X_POS);
+}
+
+// Determine if an input PS2Control is an analog stick.
+// Used later when evaluating bindings to determine if normalization is required or not.
+bool PS2Controller::IsPS2ControlAnalog(PS2Control ps2Control)
+{
+	u8 value = static_cast<u8>(ps2Control);
+	return value != static_cast<u8>(PS2Control::NONE) && value >= static_cast<u8>(PS2Control::RIGHT_X_POS);
+}
+
 PS2Controller::PS2Controller()
 {
 	
@@ -29,13 +45,17 @@ void PS2Controller::Debug_SetBindings()
 	Binding_Xinput* start = new Binding_Xinput(0, XINPUT_GAMEPAD_START, PS2Control::START);
 	Binding_Xinput* select = new Binding_Xinput(0, XINPUT_GAMEPAD_BACK, PS2Control::SELECT);
 	Binding_Xinput* l1 = new Binding_Xinput(0, XINPUT_GAMEPAD_LEFT_SHOULDER, PS2Control::L1);
-	Binding_Xinput* l2 = new Binding_Xinput(0, XinputTriggerType::LEFT_TRIGGER, PS2Control::L2);
+	Binding_Xinput* l2 = new Binding_Xinput(0, XinputTriggerType::LEFT_TRIGGER, PS2Control::L2, 0.2f);
 	Binding_Xinput* r1 = new Binding_Xinput(0, XINPUT_GAMEPAD_RIGHT_SHOULDER, PS2Control::R1);
-	Binding_Xinput* r2 = new Binding_Xinput(0, XinputTriggerType::RIGHT_TRIGGER, PS2Control::R2);
-	Binding_Xinput* leftX = new Binding_Xinput(0, XinputAnalogType::LEFT_X, PS2Control::LEFT_X);
-	Binding_Xinput* leftY = new Binding_Xinput(0, XinputAnalogType::LEFT_Y, PS2Control::LEFT_Y);
-	Binding_Xinput* rightX = new Binding_Xinput(0, XinputAnalogType::RIGHT_X, PS2Control::RIGHT_X);
-	Binding_Xinput* rightY = new Binding_Xinput(0, XinputAnalogType::RIGHT_Y, PS2Control::RIGHT_Y);
+	Binding_Xinput* r2 = new Binding_Xinput(0, XinputTriggerType::RIGHT_TRIGGER, PS2Control::R2, 0.2f);
+	Binding_Xinput* leftXPos = new Binding_Xinput(0, XinputAnalogType::LEFT_X_POS, PS2Control::LEFT_X_POS, 0.2f);
+	Binding_Xinput* leftXNeg = new Binding_Xinput(0, XinputAnalogType::LEFT_X_NEG, PS2Control::LEFT_X_NEG, 0.2f);
+	Binding_Xinput* leftYPos = new Binding_Xinput(0, XinputAnalogType::LEFT_Y_POS, PS2Control::LEFT_Y_NEG, 0.2f);
+	Binding_Xinput* leftYNeg = new Binding_Xinput(0, XinputAnalogType::LEFT_Y_NEG, PS2Control::LEFT_Y_POS, 0.2f);
+	Binding_Xinput* rightXPos = new Binding_Xinput(0, XinputAnalogType::RIGHT_X_POS, PS2Control::RIGHT_X_POS, 0.2f);
+	Binding_Xinput* rightXNeg = new Binding_Xinput(0, XinputAnalogType::RIGHT_X_NEG, PS2Control::RIGHT_X_NEG, 0.2f);
+	Binding_Xinput* rightYPos = new Binding_Xinput(0, XinputAnalogType::RIGHT_Y_POS, PS2Control::RIGHT_Y_NEG, 0.2f);
+	Binding_Xinput* rightYNeg = new Binding_Xinput(0, XinputAnalogType::RIGHT_Y_NEG, PS2Control::RIGHT_Y_POS, 0.2f);
 	Binding_Xinput* smallVib = new Binding_Xinput(0, XinputVibrationMotor::SMALL, XinputVibrationMotor::SMALL);
 	Binding_Xinput* largeVib = new Binding_Xinput(0, XinputVibrationMotor::LARGE, XinputVibrationMotor::LARGE);
 
@@ -53,10 +73,14 @@ void PS2Controller::Debug_SetBindings()
 	this->xinputBindings.push_back(l2);
 	this->xinputBindings.push_back(r1);
 	this->xinputBindings.push_back(r2);
-	this->xinputBindings.push_back(leftX);
-	this->xinputBindings.push_back(leftY);
-	this->xinputBindings.push_back(rightX);
-	this->xinputBindings.push_back(rightY);
+	this->xinputBindings.push_back(leftXPos);
+	this->xinputBindings.push_back(leftXNeg);
+	this->xinputBindings.push_back(leftYPos);
+	this->xinputBindings.push_back(leftYNeg);
+	this->xinputBindings.push_back(rightXPos);
+	this->xinputBindings.push_back(rightXNeg);
+	this->xinputBindings.push_back(rightYPos);
+	this->xinputBindings.push_back(rightYNeg);
 	this->xinputBindings.push_back(smallVib);
 	this->xinputBindings.push_back(largeVib);
 }
@@ -113,24 +137,42 @@ void PS2Controller::SetButton(PS2Control ps2Control, u8 newValue)
 		case PS2Control::SQUARE:
 			this->buttonStates.square = newValue;
 			break;
+		default:
+			DevCon.Warning("%s(%02X, %02X) called with a non-button PS2Control", __FUNCTION__, ps2Control, newValue);
+			return;
 	}
 }
 
 void PS2Controller::SetAnalog(PS2Control ps2Control, u8 newValue)
 {
+	float factor = (float)newValue / 0xff;
+
 	switch (ps2Control)
 	{
-		case PS2Control::LEFT_X:
-			this->analogStates.leftX = newValue;
+		// TODO: Bind buttons to the components on a single axis, see what behavior is (override, cancel?)
+		case PS2Control::LEFT_X_POS:
+			this->analogStates.leftXPos = 0x7f + (factor * 0x80);
 			break;
-		case PS2Control::LEFT_Y:
-			this->analogStates.leftY = newValue;
+		case PS2Control::LEFT_X_NEG:
+			this->analogStates.leftXNeg = 0x7f - (factor * 0x7f);
 			break;
-		case PS2Control::RIGHT_X:
-			this->analogStates.rightX = newValue;
+		case PS2Control::LEFT_Y_POS:
+			this->analogStates.leftYPos = 0x7f + (factor * 0x80);
 			break;
-		case PS2Control::RIGHT_Y:
-			this->analogStates.rightY = newValue;
+		case PS2Control::LEFT_Y_NEG:
+			this->analogStates.leftYNeg = 0x7f - (factor * 0x7f);
+			break;
+		case PS2Control::RIGHT_X_POS:
+			this->analogStates.rightXPos = 0x7f + (factor * 0x80);
+			break;
+		case PS2Control::RIGHT_X_NEG:
+			this->analogStates.rightXNeg = 0x7f - (factor * 0x7f);
+			break;
+		case PS2Control::RIGHT_Y_POS:
+			this->analogStates.rightYPos = 0x7f + (factor * 0x80);
+			break;
+		case PS2Control::RIGHT_Y_NEG:
+			this->analogStates.rightYNeg = 0x7f - (factor * 0x7f);
 			break;
 		default:
 			DevCon.Warning("%s(%02X, %02X) called with a non-analog PS2Control", __FUNCTION__, ps2Control, newValue);
@@ -195,7 +237,7 @@ u8 PS2Controller::GetButton(PS2Control ps2Control)
 		case PS2Control::R2:
 			return this->buttonStates.R2;
 		default:
-			DevCon.Warning("%s(%02X) called with a non-pressure PS2Control (%d)", __FUNCTION__, ps2Control);
+			DevCon.Warning("%s(%02X) called with a non-pressure PS2Control", __FUNCTION__, ps2Control);
 			return 0x7f;
 	}
 }
@@ -205,12 +247,16 @@ u8 PS2Controller::GetAnalog(PS2Control ps2Control)
 	switch (ps2Control)
 	{
 		case PS2Control::LEFT_X:
+			this->analogStates.leftX = this->analogStates.leftXPos + this->analogStates.leftXNeg - 0x7f;
 			return this->analogStates.leftX;
 		case PS2Control::LEFT_Y:
+			this->analogStates.leftY = this->analogStates.leftYPos + this->analogStates.leftYNeg - 0x7f;
 			return this->analogStates.leftY;
 		case PS2Control::RIGHT_X:
+			this->analogStates.rightX = this->analogStates.rightXPos + this->analogStates.rightXNeg - 0x7f;
 			return this->analogStates.rightX;
 		case PS2Control::RIGHT_Y:
+			this->analogStates.rightY = this->analogStates.rightYPos + this->analogStates.rightYNeg - 0x7f;
 			return this->analogStates.rightY;
 		default:
 			DevCon.Warning("%s(%02X) called with a non-analog PS2Control (%d)", __FUNCTION__, ps2Control);

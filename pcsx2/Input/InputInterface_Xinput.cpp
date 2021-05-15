@@ -67,17 +67,34 @@ BYTE InputInterface_Xinput::GetTriggerValue(const DWORD xinputId, const XinputTr
 SHORT InputInterface_Xinput::GetAnalogValue(const DWORD xinputId, const XinputAnalogType xinputAnalogType)
 {
 	IsXinputIdInBounds(xinputId);
+	SHORT value = 0;
 
 	switch (xinputAnalogType)
 	{
-		case XinputAnalogType::LEFT_X:
-			return state[xinputId].Gamepad.sThumbLX;
-		case XinputAnalogType::LEFT_Y:
-			return state[xinputId].Gamepad.sThumbLY;
-		case XinputAnalogType::RIGHT_X:
-			return state[xinputId].Gamepad.sThumbRX;
-		case XinputAnalogType::RIGHT_Y:
-			return state[xinputId].Gamepad.sThumbRY;
+		case XinputAnalogType::LEFT_X_POS:
+			value = state[xinputId].Gamepad.sThumbLX;
+			return value > 0 ? value : 0;
+		case XinputAnalogType::LEFT_X_NEG:
+			value = state[xinputId].Gamepad.sThumbLX;
+			return value < 0 ? value : 0;
+		case XinputAnalogType::LEFT_Y_POS:
+			value = state[xinputId].Gamepad.sThumbLY;
+			return value > 0 ? value : 0;
+		case XinputAnalogType::LEFT_Y_NEG:
+			value = state[xinputId].Gamepad.sThumbLY;
+			return value < 0 ? value : 0;
+		case XinputAnalogType::RIGHT_X_POS:
+			value = state[xinputId].Gamepad.sThumbRX;
+			return value > 0 ? value : 0;
+		case XinputAnalogType::RIGHT_X_NEG:
+			value = state[xinputId].Gamepad.sThumbRX;
+			return value < 0 ? value : 0;
+		case XinputAnalogType::RIGHT_Y_POS:
+			value = state[xinputId].Gamepad.sThumbRY;
+			return value > 0 ? value : 0;
+		case XinputAnalogType::RIGHT_Y_NEG:
+			value = state[xinputId].Gamepad.sThumbRY;
+			return value < 0 ? value : 0;
 		default:
 			return 0;
 	}
