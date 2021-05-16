@@ -130,6 +130,24 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 		inputMain->inputInterface_Xinput->SendVibration(i);
 	}
 
+	// Windows Keyboard
+	const size_t windowsKeyboardSize = ps2Controller->windowsKeyboardBindings.size();
+
+	for (size_t i = 0; i < windowsKeyboardSize; i++)
+	{
+		Binding_WindowsKeyboard* binding = ps2Controller->windowsKeyboardBindings.at(i);
+		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->keyStates[binding->GetVkeyId()];
+
+		if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+		{
+			ps2Controller->SetButton(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+		}
+		else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+		{
+			ps2Controller->SetAnalog(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+		}
+	}
+	
 	// TODO: Nefarius' PS3 driver?
 #endif
 #ifdef __linux__
