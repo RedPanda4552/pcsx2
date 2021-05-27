@@ -6,14 +6,15 @@
 #include "Input/InputInterface_Xinput.h"
 #include "Input/InputInterface_WindowsKeyboard.h"
 
-#define MAX_PORTS 2
-#define MAX_SLOTS 4
+#include <array>
 
-class Pad
+static constexpr u8 MAX_PORTS = 2;
+static constexpr u8 MAX_SLOTS = 4;
+
+class PadState
 {
-private:
-	PS2Controller* ps2Controllers[MAX_PORTS][MAX_SLOTS];
-	PS2Controller* currentPS2Controller;
+public:
+	u32 version;
 	PadCommandType padCommandType = PadCommandType::NOT_SET;
 	// Number of command bytes received. This value is always current; PadCommandInit and PadCommandExec
 	// can read this value while executing and always expect this value to reflect the number of command
@@ -22,11 +23,18 @@ private:
 	// doing anything else.
 	u8 cmdBytesReceived = 0;
 	u8 currentPort = 0, currentSlot = 0;
+};
+
+class Pad
+{
+private:
+	PadState padState;
+	std::array<std::array<PS2Controller, MAX_SLOTS>, MAX_PORTS> ps2Controllers;
 
 public:
 	Pad();
 	~Pad();
-	void UpdateBoundInputs(PS2Controller* ps2Controller);
+	void UpdateBoundInputs();
 	// Initiate a PAD command sequence. Should be called only once, on the first byte of a PAD command.
 	// Specifies which PAD port/slot will be used, and resets most relevant fields.
 	u8 PadCommandInit(u8 port, u8 slot);
@@ -50,31 +58,13 @@ public:
 	void LoadState(pxInputStream& reader);
 };
 
-static const u32 PAD_STATE_VERSION = 0x00000006;
+static const u32 PAD_STATE_VERSION = 0x00000007;
 
-class ControllerState
-{
-public:
-	PhysicalType physicalType;
-	AnalogLight analogLight;
-	PadMode targetPadMode;
-	PadMode currentPadMode;
-	ButtonStates buttonStates;
-	AnalogStates analogStates;
-	GuitarStates guitarStates;
-	VibrationStates vibrationStates;
-	bool analogLightLocked;
-	bool constantStage;
-	u32 buttonMask;
-};
-
-class PadState
+class PadSaveState
 {
 public:
 	u32 version;
-	PadCommandType padCommandType;
-	u8 cmdBytesReceived;
-	u8 currentPort;
-	u8 currentSlot;
+	PadState padState;
 	ControllerState controllerStates[MAX_PORTS][MAX_SLOTS];
 };
+

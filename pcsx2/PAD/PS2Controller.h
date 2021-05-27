@@ -7,7 +7,7 @@
 
 #include <vector>
 
-class PS2Controller
+class ControllerState
 {
 public:
 	PhysicalType physicalType = PhysicalType::STANDARD;
@@ -31,6 +31,12 @@ public:
 	// during commands and, while it is never cleared out, should not be relied
 	// on for reporting the mode of the pad.
 	u32 buttonMask = 0;
+};
+
+class PS2Controller
+{
+public:
+	ControllerState controllerState;
 #ifdef _WINDOWS
 	std::vector<Binding_Xinput*> xinputBindings;
 	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
@@ -41,7 +47,9 @@ public:
 
 	PS2Controller();
 	~PS2Controller();
+	void Debug_InitBindings();
 	void Debug_SetBindings();
+	void Debug_ClearBindings();
 	void SetButton(PS2Control ps2Control, u8 newValue);
 	void SetAnalog(PS2Control ps2Control, u8 newValue);
 	u8 GetFirstDigitalByte();

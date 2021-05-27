@@ -6,41 +6,29 @@
 #include "Utilities/pxStreams.h"
 #include "App.h"
 
+#define currentPs2Controller ps2Controllers.at(padState.currentPort).at(padState.currentSlot)
+
 Pad::Pad()
 {
-	for (size_t i = 0; i < MAX_PORTS; i++)
-	{
-		for (size_t j = 0; j < MAX_SLOTS; j++)
-		{
-			ps2Controllers[i][j] = new PS2Controller();
-		}
-	}
-
-	ps2Controllers[0][0]->Debug_SetBindings();
+	ps2Controllers.at(0).at(0).Debug_SetBindings();
 }
 
 Pad::~Pad()
 {
-	for (size_t i = 0; i < MAX_PORTS; i++)
-	{
-		for (size_t j = 0; j < MAX_SLOTS; j++)
-		{
-			delete ps2Controllers[i][j];
-		}
-	}
+	
 }
 
-void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
+void Pad::UpdateBoundInputs()
 {
 	InputMain* inputMain = wxGetApp().inputMain;
 
 #ifdef _WIN32
 	// Xinput
-	const size_t xinputSize = ps2Controller->xinputBindings.size();
+	const size_t xinputSize = currentPs2Controller.xinputBindings.size();
 
 	for (size_t i = 0; i < xinputSize; i++)
 	{
-		Binding_Xinput* binding = ps2Controller->xinputBindings.at(i);
+		Binding_Xinput* binding = currentPs2Controller.xinputBindings.at(i);
 
 		// If the Xinput control we are mapping is a standard button
 		if (binding->GetButtonMask() != 0)
@@ -49,11 +37,11 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
 			{
-				ps2Controller->SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+				currentPs2Controller.SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
 			}
 			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
 			{
-				ps2Controller->SetAnalog(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+				currentPs2Controller.SetAnalog(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
 			}
 		}
 		// If the Xinput control we are mapping is a trigger
@@ -63,11 +51,11 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
 			{
-				ps2Controller->SetButton(binding->GetPS2Control(), triggerValue);
+				currentPs2Controller.SetButton(binding->GetPS2Control(), triggerValue);
 			}
 			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
 			{
-				ps2Controller->SetAnalog(binding->GetPS2Control(), triggerValue);
+				currentPs2Controller.SetAnalog(binding->GetPS2Control(), triggerValue);
 			}
 		}
 		// If the Xinput control we are mapping is an analog
@@ -98,11 +86,11 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
 			{
-				ps2Controller->SetButton(binding->GetPS2Control(), analogValueNormalized);
+				currentPs2Controller.SetButton(binding->GetPS2Control(), analogValueNormalized);
 			}
 			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
 			{
-				ps2Controller->SetAnalog(binding->GetPS2Control(), analogValueNormalized);
+				currentPs2Controller.SetAnalog(binding->GetPS2Control(), analogValueNormalized);
 			}
 		}
 		// If the Xinput control we are mapping is a vibration motor
@@ -110,13 +98,13 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 		{
 			if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::SMALL)
 			{
-				float f = (float)ps2Controller->vibrationStates.smallMotor / 0xff;
+				float f = (float)currentPs2Controller.controllerState.vibrationStates.smallMotor / 0xff;
 				WORD vibrationNormalized = f * 0xffff;
 				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
 			}
 			else if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::LARGE)
 			{
-				float f = (float)ps2Controller->vibrationStates.largeMotor / 0xff;
+				float f = (float)currentPs2Controller.controllerState.vibrationStates.largeMotor / 0xff;
 				WORD vibrationNormalized = f * 0xffff;
 				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
 			}
@@ -131,20 +119,20 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 	}
 
 	// Windows Keyboard
-	const size_t windowsKeyboardSize = ps2Controller->windowsKeyboardBindings.size();
+	const size_t windowsKeyboardSize = currentPs2Controller.windowsKeyboardBindings.size();
 
 	for (size_t i = 0; i < windowsKeyboardSize; i++)
 	{
-		Binding_WindowsKeyboard* binding = ps2Controller->windowsKeyboardBindings.at(i);
+		Binding_WindowsKeyboard* binding = currentPs2Controller.windowsKeyboardBindings.at(i);
 		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->keyStates[binding->GetVkeyId()];
 
 		if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
 		{
-			ps2Controller->SetButton(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+			currentPs2Controller.SetButton(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
 		}
 		else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
 		{
-			ps2Controller->SetAnalog(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+			currentPs2Controller.SetAnalog(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
 		}
 	}
 	
@@ -163,32 +151,31 @@ void Pad::UpdateBoundInputs(PS2Controller* ps2Controller)
 
 u8 Pad::PadCommandInit(u8 port, u8 slot)
 {
-	this->cmdBytesReceived = 1;
-	this->padCommandType = PadCommandType::NOT_SET;
-	this->currentPort = port;
-	this->currentSlot = slot;
-	this->currentPS2Controller = ps2Controllers[currentPort][currentSlot];
-	this->UpdateBoundInputs(currentPS2Controller);
+	this->padState.cmdBytesReceived = 1;
+	this->padState.padCommandType = PadCommandType::NOT_SET;
+	this->padState.currentPort = port;
+	this->padState.currentSlot = slot;
+	this->UpdateBoundInputs();
 	return 0xff;
 }
 
 u8 Pad::PadCommandExec(u8 cmdByte)
 {
-	cmdBytesReceived++;
+	this->padState.cmdBytesReceived++;
 
-	if (cmdBytesReceived == 2)
+	if (this->padState.cmdBytesReceived == 2)
 	{
-		padCommandType = static_cast<PadCommandType>(cmdByte);
-		return static_cast<u8>(this->currentPS2Controller->currentPadMode);
+		this->padState.padCommandType = static_cast<PadCommandType>(cmdByte);
+		return static_cast<u8>(this->currentPs2Controller.controllerState.currentPadMode);
 	}
 	// The third byte of a command is always 0x00, and always gets a 0x5a response.
-	else if (cmdBytesReceived == 3)
+	else if (this->padState.cmdBytesReceived == 3)
 	{
 		return 0x5a;
 	}
 	else
 	{
-		switch (padCommandType)
+		switch (this->padState.padCommandType)
 		{
 			case PadCommandType::MYSTERY:
 				return Mystery(cmdByte);
@@ -213,7 +200,7 @@ u8 Pad::PadCommandExec(u8 cmdByte)
 			case PadCommandType::ANALOG_EDIT:
 				return ResponseBytes(cmdByte);
 			default:
-				DevCon.Warning("(PAD) Second byte in PAD command (%02X) did not match any known PAD modes!", padCommandType);
+				DevCon.Warning("(PAD) Second byte in PAD command (%02X) did not match any known PAD modes!", this->padState.padCommandType);
 				return 0xff;
 		}
 	}
@@ -223,13 +210,13 @@ u8 Pad::Mystery(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
 		case 5:
@@ -242,7 +229,7 @@ u8 Pad::Mystery(u8 cmdByte)
 		case 9:
 			return 0x5a;
 		default:
-			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, cmdBytesReceived);
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 			return 0xff;
 	}
 }
@@ -251,25 +238,25 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
 	// last (9th) byte returned is always 0x5a
-	if (this->cmdBytesReceived == 9)
+	if (this->padState.cmdBytesReceived == 9)
 	{
 		return 0x5a;
 	}
 
-	if (this->currentPS2Controller->targetPadMode == PadMode::DIGITAL)
+	if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::DIGITAL)
 	{
 		return 0x00;
 	}
-	else if (this->currentPS2Controller->targetPadMode == PadMode::ANALOG)
+	else if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::ANALOG)
 	{
-		switch (this->cmdBytesReceived)
+		switch (this->padState.cmdBytesReceived)
 		{
 			case 4:
 				return 0x3f;
@@ -277,9 +264,9 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 				return 0x00;
 		}
 	}
-	else if (this->currentPS2Controller->targetPadMode == PadMode::DUALSHOCK2)
+	else if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::DUALSHOCK2)
 	{
-		switch (this->cmdBytesReceived)
+		switch (this->padState.cmdBytesReceived)
 		{
 			case 4:
 			case 5:
@@ -295,44 +282,44 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 u8 Pad::Poll(u8 cmdByte, bool skipVibration)
 {
 	// Sanity check
-	if (this->cmdBytesReceived < 4)
+	if (this->padState.cmdBytesReceived < 4)
 	{
 		pxAssert(false, "Pad::Poll invoked prematurely before 4th command byte received");
 	}
 	// Digital Byte 1
-	else if (this->cmdBytesReceived == 4)
+	else if (this->padState.cmdBytesReceived == 4)
 	{
 		if (!skipVibration)
 		{
 			// If less than 0xff, flush to zero (only 0xff enables small motor)
-			this->currentPS2Controller->SetVibration(VibrationMotor::SMALL, cmdByte < 0xff ? 0 : cmdByte);
+			this->currentPs2Controller.SetVibration(VibrationMotor::SMALL, cmdByte < 0xff ? 0 : cmdByte);
 		}
 
-		return this->currentPS2Controller->GetFirstDigitalByte();
+		return this->currentPs2Controller.GetFirstDigitalByte();
 	}
 	// Digital Byte 2
-	else if (this->cmdBytesReceived == 5)
+	else if (this->padState.cmdBytesReceived == 5)
 	{
 		if (!skipVibration)
 		{
-			this->currentPS2Controller->SetVibration(VibrationMotor::LARGE, cmdByte);
+			this->currentPs2Controller.SetVibration(VibrationMotor::LARGE, cmdByte);
 		}
 
-		return this->currentPS2Controller->GetSecondDigitalByte();
+		return this->currentPs2Controller.GetSecondDigitalByte();
 	}
 	// Analog Axes (only requested in modes 0x73 (Analog) and 0x79 (Dualshock 2)
-	else if (this->cmdBytesReceived <= 9)
+	else if (this->padState.cmdBytesReceived <= 9)
 	{
-		return this->currentPS2Controller->GetAnalog(static_cast<PS2Control>(this->cmdBytesReceived));
+		return this->currentPs2Controller.GetAnalog(static_cast<PS2Control>(this->padState.cmdBytesReceived));
 	}
 	// Pressures (only requested in mode 0x79 (Dualshock 2)
-	else if (this->cmdBytesReceived <= 21)
+	else if (this->padState.cmdBytesReceived <= 21)
 	{
-		return this->currentPS2Controller->GetButton(static_cast<PS2Control>(this->cmdBytesReceived));
+		return this->currentPs2Controller.GetButton(static_cast<PS2Control>(this->padState.cmdBytesReceived));
 	}
 	else
 	{
-		DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+		DevCon.Warning("%s(%02X) overran max expected length (%d > 21)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 		return 0x00;
 	}
 }
@@ -341,14 +328,14 @@ u8 Pad::Config(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
 			if (cmdByte == 0x00)
 			{
-				if (this->currentPS2Controller->currentPadMode == PadMode::CONFIG)
+				if (this->currentPs2Controller.controllerState.currentPadMode == PadMode::CONFIG)
 				{
-					this->currentPS2Controller->currentPadMode = this->currentPS2Controller->targetPadMode;
+					this->currentPs2Controller.controllerState.currentPadMode = this->currentPs2Controller.controllerState.targetPadMode;
 				}
 				else
 				{
@@ -357,9 +344,9 @@ u8 Pad::Config(u8 cmdByte)
 			}
 			else if (cmdByte == 0x01)
 			{
-				if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+				if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 				{
-					this->currentPS2Controller->currentPadMode = PadMode::CONFIG;
+					this->currentPs2Controller.controllerState.currentPadMode = PadMode::CONFIG;
 				}
 				else
 				{
@@ -386,24 +373,24 @@ u8 Pad::ModeSwitch(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
 			if (cmdByte == 0x01)
 			{
-				this->currentPS2Controller->analogLight = AnalogLight::ON;
-				this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
+				this->currentPs2Controller.controllerState.analogLight = AnalogLight::ON;
+				this->currentPs2Controller.controllerState.targetPadMode = PadMode::ANALOG;
 			}
 			else if (cmdByte == 0x00)
 			{
-				this->currentPS2Controller->analogLight = AnalogLight::OFF;
-				this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
+				this->currentPs2Controller.controllerState.analogLight = AnalogLight::OFF;
+				this->currentPs2Controller.controllerState.targetPadMode = PadMode::DIGITAL;
 			}
 			else
 			{
@@ -411,7 +398,7 @@ u8 Pad::ModeSwitch(u8 cmdByte)
 			}
 			break;
 		case 5:
-			this->currentPS2Controller->analogLightLocked = (cmdByte == 0x03);
+			this->currentPs2Controller.controllerState.analogLightLocked = (cmdByte == 0x03);
 			break;
 		default:
 			return 0x00;
@@ -422,20 +409,20 @@ u8 Pad::StatusInfo(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
-			return static_cast<u8>(ps2Controllers[currentPort][currentSlot]->physicalType);
+			return static_cast<u8>(currentPs2Controller.controllerState.physicalType);
 		case 5:
 			return 0x02; // magic!
 		case 6:
-			return static_cast<u8>(ps2Controllers[currentPort][currentSlot]->analogLight);
+			return static_cast<u8>(currentPs2Controller.controllerState.analogLight);
 		case 7:
 			return 0x02;
 		case 8:
@@ -443,7 +430,7 @@ u8 Pad::StatusInfo(u8 cmdByte)
 		case 9:
 			return 0x00;
 		default:
-			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, cmdBytesReceived);
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 			return 0xff;
 	}
 }
@@ -452,20 +439,20 @@ u8 Pad::Constant1(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
-			this->currentPS2Controller->constantStage = cmdByte;
+			this->currentPs2Controller.controllerState.constantStage = cmdByte;
 		case 5:
 			return 0x00;
 		case 6:
-			if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+			if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::STANDARD)
 			{
 				return 0x00;
 			}
@@ -474,49 +461,49 @@ u8 Pad::Constant1(u8 cmdByte)
 				return 0x01;
 			}
 		case 7:
-			if (!this->currentPS2Controller->constantStage)
+			if (!this->currentPs2Controller.controllerState.constantStage)
 			{
 				return 0x02;
 			}
 			else
 			{
-				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+				if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::STANDARD)
 				{
 					return 0x00;
 				}
-				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+				else if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::GUITAR)
 				{
 					return 0x01;
 				}
 				else
 				{
-					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPs2Controller.controllerState.physicalType);
 					return 0x00;
 				}
 			}
 		case 8:
-			if (!this->currentPS2Controller->constantStage)
+			if (!this->currentPs2Controller.controllerState.constantStage)
 			{
 				return 0x00;
 			}
 			else
 			{
-				if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+				if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::STANDARD)
 				{
 					return 0x00;
 				}
-				else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+				else if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::GUITAR)
 				{
 					return 0x01;
 				}
 				else
 				{
-					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+					DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPs2Controller.controllerState.physicalType);
 					return 0x00;
 				}
 			}
 		case 9:
-			if (!this->currentPS2Controller->constantStage)
+			if (!this->currentPs2Controller.controllerState.constantStage)
 			{
 				return 0x0A;
 			}
@@ -525,7 +512,7 @@ u8 Pad::Constant1(u8 cmdByte)
 				return 0x14;
 			}
 		default:
-			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 			return 0x00;
 	}
 }
@@ -534,13 +521,13 @@ u8 Pad::Constant2(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
 		case 5:
@@ -550,23 +537,23 @@ u8 Pad::Constant2(u8 cmdByte)
 		case 7:
 			return 0x00;
 		case 8:
-			if (this->currentPS2Controller->physicalType == PhysicalType::STANDARD)
+			if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::STANDARD)
 			{
 				return 0x00;
 			}
-			else if (this->currentPS2Controller->physicalType == PhysicalType::GUITAR)
+			else if (this->currentPs2Controller.controllerState.physicalType == PhysicalType::GUITAR)
 			{
 				return 0x01;
 			}
 			else
 			{
-				DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPS2Controller->physicalType);
+				DevCon.Warning("%s(%02X) Unrecognized physical type (%02X)", __FUNCTION__, cmdByte, this->currentPs2Controller.controllerState.physicalType);
 				return 0x00;
 			}
 		case 9:
 			return 0x00;
 		default:
-			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 			return 0x00;
 	}
 }
@@ -575,16 +562,16 @@ u8 Pad::Constant3(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	if (this->currentPS2Controller->currentPadMode != PadMode::CONFIG)
+	if (this->currentPs2Controller.controllerState.currentPadMode != PadMode::CONFIG)
 	{
 		DevCon.Warning("%s(%02X) called outside of config mode", __FUNCTION__, cmdByte);
 		return 0xff;
 	}
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
-			this->currentPS2Controller->constantStage = cmdByte;
+			this->currentPs2Controller.controllerState.constantStage = cmdByte;
 		case 5:
 		case 6:
 			return 0x00;
@@ -596,7 +583,7 @@ u8 Pad::Constant3(u8 cmdByte)
 			// This seems to correspond with assertions which are made about the "pad modes" being
 			// 0x41 = digital, 0x73 = analog, 0x79 = dualshock 2. It does leave the question of if these
 			// "constant" commands should also have a value somewhere for the second nibble of the pad mode...
-			if (!this->currentPS2Controller->constantStage)
+			if (!this->currentPs2Controller.controllerState.constantStage)
 			{
 				return 0x04;
 			}
@@ -608,7 +595,7 @@ u8 Pad::Constant3(u8 cmdByte)
 		case 9:
 			return 0x00;
 		default:
-			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->cmdBytesReceived);
+			DevCon.Warning("%s(%02X) Overran expected length (%d > 9)", __FUNCTION__, cmdByte, this->padState.cmdBytesReceived);
 			return 0x00;
 	}
 }
@@ -616,7 +603,7 @@ u8 Pad::VibrationMap(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
 			return 0x00;
@@ -631,31 +618,31 @@ u8 Pad::ResponseBytes(u8 cmdByte)
 {
 	DevCon.WriteLn("%s(%02X)", __FUNCTION__, cmdByte);
 
-	switch (this->cmdBytesReceived)
+	switch (this->padState.cmdBytesReceived)
 	{
 		case 4:
-			this->currentPS2Controller->buttonMask = cmdByte;
+			this->currentPs2Controller.controllerState.buttonMask = cmdByte;
 			break;
 		case 5:
-			this->currentPS2Controller->buttonMask |= (cmdByte << 8);
+			this->currentPs2Controller.controllerState.buttonMask |= (cmdByte << 8);
 			break;
 		case 6:
-			this->currentPS2Controller->buttonMask |= (cmdByte << 16);
+			this->currentPs2Controller.controllerState.buttonMask |= (cmdByte << 16);
 			break;
 		case 9:
-			switch (this->currentPS2Controller->buttonMask)
+			switch (this->currentPs2Controller.controllerState.buttonMask)
 			{
 				case 0x0003ffff:
-					this->currentPS2Controller->analogLight = AnalogLight::ON;
-					this->currentPS2Controller->targetPadMode = PadMode::DUALSHOCK2;
+					this->currentPs2Controller.controllerState.analogLight = AnalogLight::ON;
+					this->currentPs2Controller.controllerState.targetPadMode = PadMode::DUALSHOCK2;
 					break;
 				case 0x3f:
-					this->currentPS2Controller->analogLight = AnalogLight::ON;
-					this->currentPS2Controller->targetPadMode = PadMode::ANALOG;
+					this->currentPs2Controller.controllerState.analogLight = AnalogLight::ON;
+					this->currentPs2Controller.controllerState.targetPadMode = PadMode::ANALOG;
 					break;
 				case 0x03:
-					this->currentPS2Controller->analogLight = AnalogLight::OFF;
-					this->currentPS2Controller->targetPadMode = PadMode::DIGITAL;
+					this->currentPs2Controller.controllerState.analogLight = AnalogLight::OFF;
+					this->currentPs2Controller.controllerState.targetPadMode = PadMode::DIGITAL;
 					break;
 			}
 			return 0x5a;
@@ -669,35 +656,19 @@ u8 Pad::ResponseBytes(u8 cmdByte)
 void Pad::SaveState(void* dest)
 {
 	Console.Indent().WriteLn("Saving PAD");
-	PadState padState;
-	padState.version = PAD_STATE_VERSION;
-	padState.padCommandType = this->padCommandType;
-	padState.cmdBytesReceived = this->cmdBytesReceived;
-	padState.currentPort = this->currentPort;
-	padState.currentSlot = this->currentSlot;
-
+	PadSaveState padSaveState;
+	padSaveState.version = PAD_STATE_VERSION;
+	padSaveState.padState = this->padState;
+	
 	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
 		for (size_t j = 0; j < MAX_SLOTS; j++)
 		{
-			ControllerState controllerState;
-			PS2Controller* activeController = this->ps2Controllers[i][j];
-			controllerState.physicalType = activeController->physicalType;
-			controllerState.analogLight = activeController->analogLight;
-			controllerState.targetPadMode = activeController->targetPadMode;
-			controllerState.currentPadMode = activeController->currentPadMode;
-			controllerState.buttonStates = activeController->buttonStates;
-			controllerState.analogStates = activeController->analogStates;
-			controllerState.guitarStates = activeController->guitarStates;
-			controllerState.vibrationStates = activeController->vibrationStates;
-			controllerState.analogLightLocked = activeController->analogLightLocked;
-			controllerState.constantStage = activeController->constantStage;
-			controllerState.buttonMask = activeController->buttonMask;
-			padState.controllerStates[i][j] = controllerState;
+			padSaveState.controllerStates[i][j] = this->ps2Controllers.at(i).at(j).controllerState;
 		}
 	}
 
-	memcpy(dest, &padState, sizeof(PadState));
+	memcpy(dest, &padSaveState, sizeof(PadState));
 }
 
 void Pad::LoadState(pxInputStream& reader)
@@ -710,37 +681,24 @@ void Pad::LoadState(pxInputStream& reader)
 		return;
 	}
 
-	PadState padState;
-	reader.Read(&padState, sizeof(PadState));
+	PadSaveState padSaveState;
+	reader.Read(&padSaveState, sizeof(PadSaveState));
 
-	if (padState.version != PAD_STATE_VERSION)
+	if (padSaveState.version != PAD_STATE_VERSION)
 	{
 		Console.Indent().Warning("PAD version mismatch! Expected 0x%08X, state contains 0x%08X. PAD will not be loaded.", PAD_STATE_VERSION, padState.version);
 		return;
 	}
-	
-	this->padCommandType = padState.padCommandType;
-	this->cmdBytesReceived = padState.cmdBytesReceived;
-	this->currentPort = padState.currentPort;
-	this->currentSlot = padState.currentSlot;
+
+	this->padState = padSaveState.padState;
 
 	for (size_t i = 0; i < MAX_PORTS; i++)
 	{
 		for (size_t j = 0; j < MAX_SLOTS; j++)
 		{
-			ControllerState controllerState = padState.controllerStates[i][j];
-			PS2Controller* activeController = this->ps2Controllers[i][j];
-			activeController->physicalType = controllerState.physicalType;
-			activeController->analogLight = controllerState.analogLight;
-			activeController->targetPadMode = controllerState.targetPadMode;
-			activeController->currentPadMode = controllerState.currentPadMode;
-			activeController->buttonStates = controllerState.buttonStates;
-			activeController->analogStates = controllerState.analogStates;
-			activeController->guitarStates = controllerState.guitarStates;
-			activeController->vibrationStates = controllerState.vibrationStates;
-			activeController->analogLightLocked = controllerState.analogLightLocked;
-			activeController->constantStage = controllerState.constantStage;
-			activeController->buttonMask = controllerState.buttonMask;
+			this->ps2Controllers.at(i).at(j).controllerState = padSaveState.controllerStates[i][j];
 		}
 	}
 }
+
+#undef currentPs2Controller

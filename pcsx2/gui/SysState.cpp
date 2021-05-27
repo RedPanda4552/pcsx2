@@ -297,7 +297,7 @@ public:
 	void FreezeIn(pxInputStream& reader) const { return pad->LoadState(reader); }
 	void FreezeOut(SaveStateBase& writer) const
 	{
-		size_t padStateSize = sizeof(PadState);
+		size_t padStateSize = sizeof(PadSaveState);
 		writer.PrepBlock(padStateSize);
 		pad->SaveState(writer.GetBlockPtr());
 		writer.CommitBlock(padStateSize);
