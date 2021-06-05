@@ -244,38 +244,17 @@ u8 Pad::ButtonQuery(u8 cmdByte)
 		return 0xff;
 	}
 
-	// last (9th) byte returned is always 0x5a
-	if (this->padState.cmdBytesReceived == 9)
+	switch (this->padState.cmdBytesReceived)
 	{
+	case 4:
+	case 5:
+		return 0xff;
+	case 6:
+		return 0x03;
+	case 9:
 		return 0x5a;
-	}
-
-	if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::DIGITAL)
-	{
+	default:
 		return 0x00;
-	}
-	else if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::ANALOG)
-	{
-		switch (this->padState.cmdBytesReceived)
-		{
-			case 4:
-				return 0x3f;
-			default:
-				return 0x00;
-		}
-	}
-	else if (this->currentPs2Controller.controllerState.targetPadMode == PadMode::DUALSHOCK2)
-	{
-		switch (this->padState.cmdBytesReceived)
-		{
-			case 4:
-			case 5:
-				return 0xff;
-			case 6:
-				return 0x03;
-			default:
-				return 0x00;
-		}
 	}
 }
 
