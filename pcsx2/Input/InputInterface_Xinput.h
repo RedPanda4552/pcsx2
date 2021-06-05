@@ -20,14 +20,13 @@
 
 class InputInterface_Xinput : public InputInterface
 {
-public:
+private:
 	XINPUT_STATE state[XUSER_MAX_COUNT];
 	XINPUT_VIBRATION vibration[XUSER_MAX_COUNT];
 	WORD lowFreqSpeed[XUSER_MAX_COUNT];
 	WORD highFreqSpeed[XUSER_MAX_COUNT];
-
+public:
 	InputInterface_Xinput() noexcept;
-	~InputInterface_Xinput() noexcept;
 	bool StageVibration(const DWORD xinputId, const XinputVibrationMotor xinputVibrationMotor, const WORD strength);
 	bool SendVibration(const DWORD xinputId);
 	bool GetButtonValue(const DWORD xinputId, const WORD buttonMask);

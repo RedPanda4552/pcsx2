@@ -11,11 +11,6 @@ InputInterface_Xinput::InputInterface_Xinput() noexcept
 	ZeroMemory(highFreqSpeed, sizeof(WORD) * XUSER_MAX_COUNT);
 }
 
-InputInterface_Xinput::~InputInterface_Xinput() noexcept
-{
-
-}
-
 bool InputInterface_Xinput::StageVibration(const DWORD xinputId, const XinputVibrationMotor xinputVibrationMotor, const WORD strength)
 {
 	IsXinputIdInBounds(xinputId);

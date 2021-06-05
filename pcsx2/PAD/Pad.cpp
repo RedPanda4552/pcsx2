@@ -124,7 +124,7 @@ void Pad::UpdateBoundInputs()
 	for (size_t i = 0; i < windowsKeyboardSize; i++)
 	{
 		Binding_WindowsKeyboard& binding = currentPs2Controller.windowsKeyboardBindings.at(i);
-		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->keyStates[binding.GetVkeyId()];
+		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->GetKeyStates().at(binding.GetVkeyId());
 
 		if (PS2Controller::IsPS2ControlButton(binding.GetPS2Control()))
 		{
