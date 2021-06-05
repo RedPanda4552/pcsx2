@@ -51,11 +51,6 @@ Binding_Xinput::Binding_Xinput(DWORD xinputId, XinputVibrationMotor ps2Vibration
 	this->deadzone = 0;
 }
 
-Binding_Xinput::~Binding_Xinput()
-{
-
-}
-
 DWORD Binding_Xinput::GetXinputId() noexcept
 {
 	return this->xinputId;

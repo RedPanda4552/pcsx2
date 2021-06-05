@@ -28,40 +28,40 @@ void Pad::UpdateBoundInputs()
 
 	for (size_t i = 0; i < xinputSize; i++)
 	{
-		Binding_Xinput* binding = currentPs2Controller.xinputBindings.at(i);
+		Binding_Xinput& binding = currentPs2Controller.xinputBindings.at(i);
 
 		// If the Xinput control we are mapping is a standard button
-		if (binding->GetButtonMask() != 0)
+		if (binding.GetButtonMask() != 0)
 		{
-			bool buttonValue = inputMain->inputInterface_Xinput->GetButtonValue(binding->GetXinputId(), binding->GetButtonMask());
+			bool buttonValue = inputMain->inputInterface_Xinput->GetButtonValue(binding.GetXinputId(), binding.GetButtonMask());
 
-			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			if (PS2Controller::IsPS2ControlButton(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetButton(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+				currentPs2Controller.SetButton(binding.GetPS2Control(), buttonValue ? 0xff : 0x00);
 			}
-			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			else if (PS2Controller::IsPS2ControlAnalog(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetAnalog(binding->GetPS2Control(), buttonValue ? 0xff : 0x00);
+				currentPs2Controller.SetAnalog(binding.GetPS2Control(), buttonValue ? 0xff : 0x00);
 			}
 		}
 		// If the Xinput control we are mapping is a trigger
-		else if (binding->GetTriggerType() != XinputTriggerType::NONE)
+		else if (binding.GetTriggerType() != XinputTriggerType::NONE)
 		{
-			BYTE triggerValue = inputMain->inputInterface_Xinput->GetTriggerValue(binding->GetXinputId(), binding->GetTriggerType());
+			BYTE triggerValue = inputMain->inputInterface_Xinput->GetTriggerValue(binding.GetXinputId(), binding.GetTriggerType());
 
-			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			if (PS2Controller::IsPS2ControlButton(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetButton(binding->GetPS2Control(), triggerValue);
+				currentPs2Controller.SetButton(binding.GetPS2Control(), triggerValue);
 			}
-			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			else if (PS2Controller::IsPS2ControlAnalog(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetAnalog(binding->GetPS2Control(), triggerValue);
+				currentPs2Controller.SetAnalog(binding.GetPS2Control(), triggerValue);
 			}
 		}
 		// If the Xinput control we are mapping is an analog
-		else if (binding->GetAnalogType() != XinputAnalogType::NONE)
+		else if (binding.GetAnalogType() != XinputAnalogType::NONE)
 		{
-			SHORT analogValue = inputMain->inputInterface_Xinput->GetAnalogValue(binding->GetXinputId(), binding->GetAnalogType());
+			SHORT analogValue = inputMain->inputInterface_Xinput->GetAnalogValue(binding.GetXinputId(), binding.GetAnalogType());
 			float f = (float)analogValue / 0x7fff;
 
 			// If negative, invert so our scaling factor is still positive/usable.
@@ -77,36 +77,36 @@ void Pad::UpdateBoundInputs()
 			}
 
 			// Compare to deadzone, drop if lower.
-			if (f <= binding->GetDeadzone())
+			if (f <= binding.GetDeadzone())
 			{
 				f = 0;
 			}
 
 			u8 analogValueNormalized = f * 0xff;
 
-			if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+			if (PS2Controller::IsPS2ControlButton(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetButton(binding->GetPS2Control(), analogValueNormalized);
+				currentPs2Controller.SetButton(binding.GetPS2Control(), analogValueNormalized);
 			}
-			else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+			else if (PS2Controller::IsPS2ControlAnalog(binding.GetPS2Control()))
 			{
-				currentPs2Controller.SetAnalog(binding->GetPS2Control(), analogValueNormalized);
+				currentPs2Controller.SetAnalog(binding.GetPS2Control(), analogValueNormalized);
 			}
 		}
 		// If the Xinput control we are mapping is a vibration motor
-		else if (binding->GetXinputVibrationMotor() != XinputVibrationMotor::NONE)
+		else if (binding.GetXinputVibrationMotor() != XinputVibrationMotor::NONE)
 		{
-			if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::SMALL)
+			if (binding.GetPS2VibrationMotor() == XinputVibrationMotor::SMALL)
 			{
 				float f = (float)currentPs2Controller.controllerState.vibrationStates.smallMotor / 0xff;
 				WORD vibrationNormalized = f * 0xffff;
-				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
+				inputMain->inputInterface_Xinput->StageVibration(binding.GetXinputId(), binding.GetXinputVibrationMotor(), vibrationNormalized);
 			}
-			else if (binding->GetPS2VibrationMotor() == XinputVibrationMotor::LARGE)
+			else if (binding.GetPS2VibrationMotor() == XinputVibrationMotor::LARGE)
 			{
 				float f = (float)currentPs2Controller.controllerState.vibrationStates.largeMotor / 0xff;
 				WORD vibrationNormalized = f * 0xffff;
-				inputMain->inputInterface_Xinput->StageVibration(binding->GetXinputId(), binding->GetXinputVibrationMotor(), vibrationNormalized);
+				inputMain->inputInterface_Xinput->StageVibration(binding.GetXinputId(), binding.GetXinputVibrationMotor(), vibrationNormalized);
 			}
 		}
 	}
@@ -123,16 +123,16 @@ void Pad::UpdateBoundInputs()
 
 	for (size_t i = 0; i < windowsKeyboardSize; i++)
 	{
-		Binding_WindowsKeyboard* binding = currentPs2Controller.windowsKeyboardBindings.at(i);
-		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->keyStates[binding->GetVkeyId()];
+		Binding_WindowsKeyboard& binding = currentPs2Controller.windowsKeyboardBindings.at(i);
+		SHORT keyState = inputMain->inputInterface_WindowsKeyboard->keyStates[binding.GetVkeyId()];
 
-		if (PS2Controller::IsPS2ControlButton(binding->GetPS2Control()))
+		if (PS2Controller::IsPS2ControlButton(binding.GetPS2Control()))
 		{
-			currentPs2Controller.SetButton(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+			currentPs2Controller.SetButton(binding.GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
 		}
-		else if (PS2Controller::IsPS2ControlAnalog(binding->GetPS2Control()))
+		else if (PS2Controller::IsPS2ControlAnalog(binding.GetPS2Control()))
 		{
-			currentPs2Controller.SetAnalog(binding->GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
+			currentPs2Controller.SetAnalog(binding.GetPS2Control(), (keyState & 0x80) ? 0xff : 0x00);
 		}
 	}
 	

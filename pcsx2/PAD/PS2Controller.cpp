@@ -27,63 +27,33 @@ PS2Controller::PS2Controller()
 	
 }
 
-PS2Controller::~PS2Controller()
-{
-	
-}
-
 void PS2Controller::Debug_SetBindings()
 {
 #ifdef WIN32
-	Binding_Xinput* up			= new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_UP, PS2Control::UP);
-	Binding_Xinput* right		= new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_RIGHT, PS2Control::RIGHT);
-	Binding_Xinput* down		= new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_DOWN, PS2Control::DOWN);
-	Binding_Xinput* left		= new Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_LEFT, PS2Control::LEFT);
-	Binding_Xinput* triangle	= new Binding_Xinput(0, XINPUT_GAMEPAD_Y, PS2Control::TRIANGLE);
-	Binding_Xinput* circle		= new Binding_Xinput(0, XINPUT_GAMEPAD_B, PS2Control::CIRCLE);
-	Binding_Xinput* cross		= new Binding_Xinput(0, XINPUT_GAMEPAD_A, PS2Control::CROSS);
-	Binding_Xinput* square		= new Binding_Xinput(0, XINPUT_GAMEPAD_X, PS2Control::SQUARE);
-	Binding_Xinput* start		= new Binding_Xinput(0, XINPUT_GAMEPAD_START, PS2Control::START);
-	Binding_Xinput* select		= new Binding_Xinput(0, XINPUT_GAMEPAD_BACK, PS2Control::SELECT);
-	Binding_Xinput* l1			= new Binding_Xinput(0, XINPUT_GAMEPAD_LEFT_SHOULDER, PS2Control::L1);
-	Binding_Xinput* l2			= new Binding_Xinput(0, XinputTriggerType::LEFT_TRIGGER, PS2Control::L2, 0.2f);
-	Binding_Xinput* r1			= new Binding_Xinput(0, XINPUT_GAMEPAD_RIGHT_SHOULDER, PS2Control::R1);
-	Binding_Xinput* r2			= new Binding_Xinput(0, XinputTriggerType::RIGHT_TRIGGER, PS2Control::R2, 0.2f);
-	Binding_Xinput* leftXPos	= new Binding_Xinput(0, XinputAnalogType::LEFT_X_POS, PS2Control::LEFT_X_POS, 0.2f);
-	Binding_Xinput* leftXNeg	= new Binding_Xinput(0, XinputAnalogType::LEFT_X_NEG, PS2Control::LEFT_X_NEG, 0.2f);
-	Binding_Xinput* leftYPos	= new Binding_Xinput(0, XinputAnalogType::LEFT_Y_POS, PS2Control::LEFT_Y_NEG, 0.2f);
-	Binding_Xinput* leftYNeg	= new Binding_Xinput(0, XinputAnalogType::LEFT_Y_NEG, PS2Control::LEFT_Y_POS, 0.2f);
-	Binding_Xinput* rightXPos	= new Binding_Xinput(0, XinputAnalogType::RIGHT_X_POS, PS2Control::RIGHT_X_POS, 0.2f);
-	Binding_Xinput* rightXNeg	= new Binding_Xinput(0, XinputAnalogType::RIGHT_X_NEG, PS2Control::RIGHT_X_NEG, 0.2f);
-	Binding_Xinput* rightYPos	= new Binding_Xinput(0, XinputAnalogType::RIGHT_Y_POS, PS2Control::RIGHT_Y_NEG, 0.2f);
-	Binding_Xinput* rightYNeg	= new Binding_Xinput(0, XinputAnalogType::RIGHT_Y_NEG, PS2Control::RIGHT_Y_POS, 0.2f);
-	Binding_Xinput* smallVib	= new Binding_Xinput(0, XinputVibrationMotor::SMALL, XinputVibrationMotor::SMALL);
-	Binding_Xinput* largeVib	= new Binding_Xinput(0, XinputVibrationMotor::LARGE, XinputVibrationMotor::LARGE);
-
-	this->xinputBindings.push_back(up);
-	this->xinputBindings.push_back(right);
-	this->xinputBindings.push_back(down);
-	this->xinputBindings.push_back(left);
-	this->xinputBindings.push_back(triangle);
-	this->xinputBindings.push_back(circle);
-	this->xinputBindings.push_back(cross);
-	this->xinputBindings.push_back(square);
-	this->xinputBindings.push_back(start);
-	this->xinputBindings.push_back(select);
-	this->xinputBindings.push_back(l1);
-	this->xinputBindings.push_back(l2);
-	this->xinputBindings.push_back(r1);
-	this->xinputBindings.push_back(r2);
-	this->xinputBindings.push_back(leftXPos);
-	this->xinputBindings.push_back(leftXNeg);
-	this->xinputBindings.push_back(leftYPos);
-	this->xinputBindings.push_back(leftYNeg);
-	this->xinputBindings.push_back(rightXPos);
-	this->xinputBindings.push_back(rightXNeg);
-	this->xinputBindings.push_back(rightYPos);
-	this->xinputBindings.push_back(rightYNeg);
-	this->xinputBindings.push_back(smallVib);
-	this->xinputBindings.push_back(largeVib);
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_UP, PS2Control::UP));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_RIGHT, PS2Control::RIGHT));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_DOWN, PS2Control::DOWN));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_DPAD_LEFT, PS2Control::LEFT));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_Y, PS2Control::TRIANGLE));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_B, PS2Control::CIRCLE));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_A, PS2Control::CROSS));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_X, PS2Control::SQUARE));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_START, PS2Control::START));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_BACK, PS2Control::SELECT));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_LEFT_SHOULDER, PS2Control::L1));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputTriggerType::LEFT_TRIGGER, PS2Control::L2, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XINPUT_GAMEPAD_RIGHT_SHOULDER, PS2Control::R1));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputTriggerType::RIGHT_TRIGGER, PS2Control::R2, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::LEFT_X_POS, PS2Control::LEFT_X_POS, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::LEFT_X_NEG, PS2Control::LEFT_X_NEG, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::LEFT_Y_POS, PS2Control::LEFT_Y_NEG, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::LEFT_Y_NEG, PS2Control::LEFT_Y_POS, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::RIGHT_X_POS, PS2Control::RIGHT_X_POS, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::RIGHT_X_NEG, PS2Control::RIGHT_X_NEG, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::RIGHT_Y_POS, PS2Control::RIGHT_Y_NEG, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputAnalogType::RIGHT_Y_NEG, PS2Control::RIGHT_Y_POS, 0.2f));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputVibrationMotor::SMALL, XinputVibrationMotor::SMALL));
+	this->xinputBindings.push_back(Binding_Xinput(0, XinputVibrationMotor::LARGE, XinputVibrationMotor::LARGE));
 #endif
 }
 

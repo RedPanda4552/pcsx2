@@ -38,18 +38,15 @@ class PS2Controller
 public:
 	ControllerState controllerState;
 #ifdef _WINDOWS
-	std::vector<Binding_Xinput*> xinputBindings;
-	std::vector<Binding_WindowsKeyboard*> windowsKeyboardBindings;
+	std::vector<Binding_Xinput> xinputBindings;
+	std::vector<Binding_WindowsKeyboard> windowsKeyboardBindings;
 #endif
 
 	static bool IsPS2ControlButton(PS2Control ps2Control);
 	static bool IsPS2ControlAnalog(PS2Control ps2Control);
 
 	PS2Controller();
-	~PS2Controller();
-	void Debug_InitBindings();
 	void Debug_SetBindings();
-	void Debug_ClearBindings();
 	void SetButton(PS2Control ps2Control, u8 newValue);
 	void SetAnalog(PS2Control ps2Control, u8 newValue);
 	u8 GetFirstDigitalByte();
