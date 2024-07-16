@@ -36,6 +36,7 @@
 #include "SIO/Sio.h"
 #include "SIO/Sio0.h"
 #include "SIO/Sio2.h"
+#include "SIO/Memcard/Memcard.h"
 #include "SPU2/spu2.h"
 #include "SupportURLs.h"
 #include "USB/USB.h"
@@ -848,10 +849,8 @@ void VMManager::Internal::UpdateEmuFolders()
 				memcardFilters = game->memcardFiltersAsString();
 			}
 
-			AutoEject::SetAll();
-
 			if (!GSDumpReplayer::IsReplayingDump())
-				FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
+				Memcard::Initialize();
 		}
 
 		if (EmuFolders::Textures != old_textures_directory)
@@ -1120,7 +1119,7 @@ void VMManager::UpdateDiscDetails(bool booting)
 		Achievements::GameChanged(s_disc_crc, s_current_crc);
 		ReloadPINE();
 		UpdateDiscordPresence(s_state.load(std::memory_order_relaxed) == VMState::Initializing);
-		FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
+		//FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
 	}
 }
 
@@ -1500,6 +1499,14 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	}
 	ScopedGuard close_pad = &Pad::Shutdown;
 
+	Console.WriteLn("Initializing Memcard...");
+	if (!Memcard::Initialize())
+	{
+		Host::ReportErrorAsync("Startup Error", "Failed to initialize Memcard");
+		return false;
+	}
+	ScopedGuard close_memcard = &Memcard::Shutdown;
+
 	Console.WriteLn("Initializing SIO2...");
 	if (!g_Sio2.Initialize())
 	{
@@ -1552,11 +1559,12 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	close_usb.Cancel();
 	close_dev9.Cancel();
 	close_pad.Cancel();
+	close_memcard.Cancel();
 	close_sio2.Cancel();
 	close_sio0.Cancel();
 	close_spu2.Cancel();
 	close_gs.Cancel();
-	close_memcards.Cancel();
+	//close_memcards.Cancel();
 	close_cdvd.Cancel();
 	close_cdvd_files.Cancel();
 	close_state.Cancel();
@@ -1639,9 +1647,9 @@ void VMManager::Shutdown(bool save_resume_state)
 	USBclose();
 	SPU2::Close();
 	Pad::Shutdown();
+	Memcard::Shutdown();
 	g_Sio2.Shutdown();
 	g_Sio0.Shutdown();
-	MemcardBusy::ClearBusy();
 	DEV9close();
 	DoCDVDclose();
 	FWclose();
@@ -1831,7 +1839,6 @@ bool VMManager::DoLoadState(const char* filename)
 		MTGS::PresentCurrentFrame();
 	}
 
-	MemcardBusy::CheckSaveStateDependency();
 	return true;
 }
 
@@ -1880,7 +1887,6 @@ bool VMManager::DoSaveState(const char* filename, s32 slot_for_message, bool zip
 	}
 
 	Host::OnSaveStateSaved(filename);
-	MemcardBusy::CheckSaveStateDependency();
 	return true;
 }
 
@@ -1976,7 +1982,7 @@ bool VMManager::LoadState(const char* filename)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to load state (Memory card is busy)")),
@@ -2011,7 +2017,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to load {} from slot {} (Memory card is busy)"), backup ? TRANSLATE("VMManager", "backup state") : TRANSLATE("VMManager", "state"), slot),
@@ -2026,7 +2032,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup)
 
 bool VMManager::SaveState(const char* filename, bool zip_on_thread, bool backup_old_state)
 {
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to save state (Memory card is busy)")),
@@ -2043,7 +2049,7 @@ bool VMManager::SaveStateToSlot(s32 slot, bool zip_on_thread)
 	if (filename.empty())
 		return false;
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to save state to slot {} (Memory card is busy)"), slot),

@@ -85,82 +85,34 @@ void AutoEject::CountDownTicks()
 	}
 }
 
-void AutoEject::Set(size_t port, size_t slot)
+u32 SIO::ConvertToUnifiedSlot(const u32 port, const u32 slot)
 {
-	if (mcds[port][slot].autoEjectTicks == 0)
+	if (slot == 0)
 	{
-		mcds[port][slot].autoEjectTicks = 60; // 60 frames is enough.
-		mcds[port][slot].term = Terminator::NOT_READY; // Reset terminator to NOT_READY (0x66), forces the PS2 to recheck the memcard.
+		return port; // 0, 1
+	}
+	else if (port == 0)
+	{
+		return slot + 1; // 2,3,4
+	}
+	else
+	{
+		return slot + 4; // 5,6,7
 	}
 }
 
-void AutoEject::Clear(size_t port, size_t slot)
+std::tuple<u32, u32> SIO::ConvertToPortAndSlot(const u32 unifiedSlot)
 {
-	mcds[port][slot].autoEjectTicks = 0;
-}
-
-void AutoEject::SetAll()
-{
-	Host::AddIconOSDMessage("AutoEjectAllSet", ICON_PF_MEMORY_CARD,
-		TRANSLATE_SV("MemoryCard", "Force ejecting all Memory Cards. Reinserting in 1 second."), Host::OSD_INFO_DURATION);
-
-	for (size_t port = 0; port < SIO::PORTS; port++)
+	if (unifiedSlot > 4) // [5,6,7]
 	{
-		for (size_t slot = 0; slot < SIO::SLOTS; slot++)
-		{
-			AutoEject::Set(port, slot);
-		}
+		return std::make_tuple(1, unifiedSlot - 4); // 2B,2C,2D
+	} 
+	else if (unifiedSlot > 1) // [2,3,4]
+	{
+		return std::make_tuple(0, unifiedSlot - 1); // 1B,1C,1D
 	}
-}
-
-void AutoEject::ClearAll()
-{
-	for (size_t port = 0; port < SIO::PORTS; port++)
+	else // [0,1]
 	{
-		for (size_t slot = 0; slot < SIO::SLOTS; slot++)
-		{
-			AutoEject::Clear(port, slot);
-		}
-	}
-}
-
-// Decremented once per frame if nonzero, indicates how many more frames must pass before
-// memcards are considered "no longer being written to". Used as a way to detect if it is
-// unsafe to shutdown the VM due to memcard access.
-static std::atomic_uint32_t currentBusyTicks = 0;
-
-uint32_t sioLastFrameMcdBusy = 0;
-
-void MemcardBusy::Decrement()
-{
-	if (currentBusyTicks.load(std::memory_order_relaxed) == 0)
-		return;
-
-	currentBusyTicks.fetch_sub(1, std::memory_order_release);
-}
-
-void MemcardBusy::SetBusy()
-{
-	currentBusyTicks.store(300, std::memory_order_release);
-	sioLastFrameMcdBusy = g_FrameCount;
-}
-
-bool MemcardBusy::IsBusy()
-{
-	return (currentBusyTicks.load(std::memory_order_acquire) > 0);
-}
-
-void MemcardBusy::ClearBusy()
-{
-	currentBusyTicks.store(0, std::memory_order_release);
-	sioLastFrameMcdBusy = 0;
-}
-
-void MemcardBusy::CheckSaveStateDependency()
-{
-	if (g_FrameCount - sioLastFrameMcdBusy > NUM_FRAMES_BEFORE_SAVESTATE_DEPENDENCY_WARNING)
-	{
-		Host::AddIconOSDMessage("MemcardBusy", ICON_PF_MEMORY_CARD,
-			TRANSLATE_SV("MemoryCard", "The virtual console hasn't saved to your memory card in a long time.\nSavestates should not be used in place of in-game saves."), Host::OSD_INFO_DURATION);
+		return std::make_tuple(unifiedSlot, 0); // 1A,2A
 	}
 }

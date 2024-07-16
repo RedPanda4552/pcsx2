@@ -109,28 +109,11 @@ extern bool sioPadIsMultitapSlot(u32 index);
 extern bool sioPortAndSlotIsMultitap(u32 port, u32 slot);
 extern void sioSetGameSerial(const std::string& serial);
 
-namespace AutoEject
+namespace SIO
 {
-	extern void CountDownTicks();
-	extern void Set(size_t port, size_t slot);
-	extern void Clear(size_t port, size_t slot);
-	extern void SetAll();
-	extern void ClearAll();
-} // namespace AutoEject
-
-// ~2 hours of memory card inactivity.
-constexpr u32 NUM_FRAMES_BEFORE_SAVESTATE_DEPENDENCY_WARNING = 60 * 60 * 60 * 2;
-
-// Set to the current frame count when there is memory card activity.
-// Used to detect the last frame when memory card activity was detected,
-// and if it exceeds a certain threshold, warns on savestate save/load.
-extern uint32_t sioLastFrameMcdBusy;
-
-namespace MemcardBusy
-{
-	extern void Decrement();
-	extern void SetBusy();
-	extern bool IsBusy();
-	extern void ClearBusy();
-	extern void CheckSaveStateDependency();
-}
+	// Helper function to fetch a "unified slot" index; PCSX2 frequently references ports and slots
+	// as a flat array of 8, rather than the nested arrays frequently used in PS2 libs.
+	u32 ConvertToUnifiedSlot(const u32 port, const u32 slot);
+	// Helper function to derive the port and slot for a "unified slot".
+	std::tuple<u32, u32> ConvertToPortAndSlot(const u32 unifiedSlot);
+} // namespace SIO

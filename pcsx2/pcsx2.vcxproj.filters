@@ -1397,9 +1397,32 @@
     <ClCompile Include="SIO\Pad\Pad.cpp">
       <Filter>System\Ps2\Iop\SIO\PAD</Filter>
     </ClCompile>
-    <ClCompile Include="SPU2\ReverbResample.cpp" />
     <ClCompile Include="SIO\Pad\PadPopn.cpp">
       <Filter>System\Ps2\Iop\SIO\PAD</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\Memcard.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardBase.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardNotConnected.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardPS1.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardPS2.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardHostBase.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardHostFile.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClCompile>
+    <ClCompile Include="SIO\Memcard\MemcardHostFolder.cpp">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
     </ClCompile>
     <ClCompile Include="DebugTools\SymbolGuardian.cpp">
       <Filter>System\Ps2\Debug</Filter>
@@ -1407,6 +1430,7 @@
     <ClCompile Include="DebugTools\SymbolImporter.cpp">
       <Filter>System\Ps2\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="SPU2\ReverbResample.cpp" />
     <ClCompile Include="USB\usb-eyetoy\cam-jpeg.cpp">
       <Filter>System\Ps2\USB\usb-eyetoy</Filter>
     </ClCompile>
@@ -2358,6 +2382,31 @@
     <ClInclude Include="SIO\Pad\PadPopn.h">
       <Filter>System\Ps2\Iop\SIO\PAD</Filter>
     </ClInclude>
+    <ClInclude Include="SIO\Memcard\Memcard.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardBase.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardNotConnected.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardPS1.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardPS2.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardHostBase.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardHostFile.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="SIO\Memcard\MemcardHostFolder.h">
+      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGui\ImGuiAnimated.h" />
     <ClInclude Include="SupportURLs.h" />
     <ClInclude Include="DebugTools\SymbolGuardian.h">
       <Filter>System\Ps2\Debug</Filter>
