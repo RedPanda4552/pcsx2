@@ -1,17 +1,21 @@
 // SPDX-FileCopyrightText: 2002-2024 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
+#include "PrecompiledHeader.h"
+
+#include "SIO/Sio2.h"
+
+#include "SIO/Sio.h"
+#include "SIO/SioTypes.h"
+#include "SIO/Pad/Pad.h"
+#include "SIO/Pad/PadBase.h"
+#include "SIO/Memcard/MemcardBase.h"
+#include "SIO/Multitap/MultitapProtocol.h"
+
 #include "Common.h"
 #include "Host.h"
 #include "IopDma.h"
 #include "Recording/InputRecording.h"
-#include "SIO/Memcard/MemoryCardProtocol.h"
-#include "SIO/Multitap/MultitapProtocol.h"
-#include "SIO/Pad/Pad.h"
-#include "SIO/Pad/PadBase.h"
-#include "SIO/Sio.h"
-#include "SIO/Sio2.h"
-#include "SIO/SioTypes.h"
 #include "StateWrapper.h"
 
 #define SIO2LOG_ENABLE 0
@@ -94,6 +98,16 @@ void Sio2::SoftReset()
 		g_Sio2FifoIn.pop_front();
 	}
 
+	if (!g_Sio2FifoOut.empty())
+	{
+		Console.Warning("%s FIFO OUT not empty on reset! Still has %d elements, force draining it now...", __FUNCTION__, g_Sio2FifoOut.size());
+
+		while (!g_Sio2FifoOut.empty())
+		{
+			g_Sio2FifoOut.pop_front();
+		}
+	}
+
 	// RECV1 should always be reassembled based on the devices being probed by the packet.
 	recv1 = 0;
 }
@@ -105,6 +119,7 @@ void Sio2::Interrupt()
 
 void Sio2::SetCtrl(u32 value)
 {
+	Sio2Log.WriteLn("%s(%08X)", __FUNCTION__, value);
 	this->ctrl = value;
 
 	if (this->ctrl & Sio2Ctrl::START_TRANSFER)
@@ -115,6 +130,15 @@ void Sio2::SetCtrl(u32 value)
 
 void Sio2::SetSend3(size_t position, u32 value)
 {
+	Sio2Log.WriteLn(
+		"%s(%08X, %08X) port = %d pos = %d / %d)", 
+		__FUNCTION__, 
+		position, 
+		value, 
+		value & 0x01,
+		(value >> 8) & Send3::COMMAND_LENGTH_MASK, 
+		(value >> 18) & Send3::COMMAND_LENGTH_MASK
+	);
 	this->send3[position] = value;
 
 	if (position == 0)
@@ -125,6 +149,7 @@ void Sio2::SetSend3(size_t position, u32 value)
 
 void Sio2::SetRecv1(u32 value)
 {
+	Sio2Log.WriteLn("%s(%08X)", __FUNCTION__, value);
 	this->recv1 = value;
 }
 
@@ -160,7 +185,6 @@ void Sio2::Pad()
 		}
 	}
 
-	g_Sio2FifoOut.push_back(0xff);
 	pad->SoftReset();
 
 	// Then for every byte in g_Sio2FifoIn, pass to PAD and see what it kicks back to us.
@@ -170,7 +194,7 @@ void Sio2::Pad()
 		if (pad->ejectTicks)
 		{
 			g_Sio2FifoIn.pop_front();
-			g_Sio2FifoOut.push_back(0xff);
+			g_Sio2FifoOut.push_back(0xFF);
 		}
 		// Else, actually forward to the pad.
 		else
@@ -242,139 +266,65 @@ void Sio2::Infrared()
 
 void Sio2::Memcard()
 {
-	MultitapProtocol& mtap = g_MultitapArr.at(this->port);
+	MultitapProtocol& mtap = g_MultitapArr.at(port);
+	MemcardBase* memcard = Memcard::GetMemcard(port, mtap.GetMemcardSlot());
 
-	mcd = &mcds[port][mtap.GetMemcardSlot()];
-
-	// Check if auto ejection is active. If so, set RECV1 to DISCONNECTED,
-	// and zero out the fifo to simulate dead air over the wire.
-	if (mcd->autoEjectTicks)
+	// Update the third nibble with which ports have been accessed
+	if (this->recv1 & Recv1::ONE_PORT_OPEN)
 	{
-		SetRecv1(Recv1::DISCONNECTED);
-		g_Sio2FifoOut.push_back(0xff); // Because Sio2::Write pops the first g_Sio2FifoIn member
+		this->recv1 &= ~(Recv1::ONE_PORT_OPEN);
+		this->recv1 |= Recv1::TWO_PORTS_OPEN;
+	}
+	else
+	{
+		this->recv1 |= Recv1::ONE_PORT_OPEN;
+	}
 
+	// This bit is always set, whether the memcard is present or missing
+	this->recv1 |= Recv1::NO_DEVICES_MISSING;
+
+	// If the currently accessed memcard is missing, also tick those bits
+	if (memcard->GetType() == Memcard::Type::NOT_CONNECTED || memcard->GetAutoEjectTicks())
+	{
+		if (!port)
+		{
+			this->recv1 |= Recv1::PORT_1_MISSING;
+		}
+		else
+		{
+			this->recv1 |= Recv1::PORT_2_MISSING;
+		}
+	}
+
+	// Check if auto ejection is active. If so, zero out the fifo to simulate dead air over the wire.
+	if (memcard->GetAutoEjectTicks())
+	{
 		while (!g_Sio2FifoIn.empty())
 		{
 			g_Sio2FifoIn.pop_front();
-			g_Sio2FifoOut.push_back(0xff);
+			g_Sio2FifoOut.push_back(0xFF);
 		}
 
 		return;
 	}
 
-	SetRecv1(mcd->IsPresent() ? Recv1::CONNECTED : Recv1::DISCONNECTED);
+	memcard->ExecuteCommand();
+}
 
-	const u8 commandByte = g_Sio2FifoIn.front();
-	g_Sio2FifoIn.pop_front();
-	const u8 responseByte = mcd->IsPresent() ? 0x00 : 0xff;
-	g_Sio2FifoOut.push_back(responseByte);
-	g_Sio2FifoOut.push_back(responseByte);
-	u8 ps1Input = 0;
-	u8 ps1Output = 0;
+void Sio2::InvalidDevice()
+{
+	this->recv1 = Recv1::BOTH_PORTS_MISSING;
 
-	switch (commandByte)
+	while (!g_Sio2FifoIn.empty())
 	{
-		case MemcardCommand::PROBE:
-			g_MemoryCardProtocol.Probe();
-			break;
-		case MemcardCommand::UNKNOWN_WRITE_DELETE_END:
-			g_MemoryCardProtocol.UnknownWriteDeleteEnd();
-			break;
-		case MemcardCommand::SET_ERASE_SECTOR:
-		case MemcardCommand::SET_WRITE_SECTOR:
-		case MemcardCommand::SET_READ_SECTOR:
-			g_MemoryCardProtocol.SetSector();
-			break;
-		case MemcardCommand::GET_SPECS:
-			g_MemoryCardProtocol.GetSpecs();
-			break;
-		case MemcardCommand::SET_TERMINATOR:
-			g_MemoryCardProtocol.SetTerminator();
-			break;
-		case MemcardCommand::GET_TERMINATOR:
-			g_MemoryCardProtocol.GetTerminator();
-			break;
-		case MemcardCommand::WRITE_DATA:
-			g_MemoryCardProtocol.WriteData();
-			break;
-		case MemcardCommand::READ_DATA:
-			g_MemoryCardProtocol.ReadData();
-			break;
-		case MemcardCommand::PS1_READ:
-			g_MemoryCardProtocol.ResetPS1State();
-
-			while (!g_Sio2FifoIn.empty())
-			{
-				ps1Input = g_Sio2FifoIn.front();
-				ps1Output = g_MemoryCardProtocol.PS1Read(ps1Input);
-				g_Sio2FifoIn.pop_front();
-				g_Sio2FifoOut.push_back(ps1Output);
-			}
-
-			break;
-		case MemcardCommand::PS1_STATE:
-			g_MemoryCardProtocol.ResetPS1State();
-
-			while (!g_Sio2FifoIn.empty())
-			{
-				ps1Input = g_Sio2FifoIn.front();
-				ps1Output = g_MemoryCardProtocol.PS1State(ps1Input);
-				g_Sio2FifoIn.pop_front();
-				g_Sio2FifoOut.push_back(ps1Output);
-			}
-
-			break;
-		case MemcardCommand::PS1_WRITE:
-			g_MemoryCardProtocol.ResetPS1State();
-
-			while (!g_Sio2FifoIn.empty())
-			{
-				ps1Input = g_Sio2FifoIn.front();
-				ps1Output = g_MemoryCardProtocol.PS1Write(ps1Input);
-				g_Sio2FifoIn.pop_front();
-				g_Sio2FifoOut.push_back(ps1Output);
-			}
-
-			break;
-		case MemcardCommand::PS1_POCKETSTATION:
-			g_MemoryCardProtocol.ResetPS1State();
-
-			while (!g_Sio2FifoIn.empty())
-			{
-				ps1Input = g_Sio2FifoIn.front();
-				ps1Output = g_MemoryCardProtocol.PS1Pocketstation(ps1Input);
-				g_Sio2FifoIn.pop_front();
-				g_Sio2FifoOut.push_back(ps1Output);
-			}
-
-			break;
-		case MemcardCommand::READ_WRITE_END:
-			g_MemoryCardProtocol.ReadWriteEnd();
-			break;
-		case MemcardCommand::ERASE_BLOCK:
-			g_MemoryCardProtocol.EraseBlock();
-			break;
-		case MemcardCommand::UNKNOWN_BOOT:
-			g_MemoryCardProtocol.UnknownBoot();
-			break;
-		case MemcardCommand::AUTH_XOR:
-			g_MemoryCardProtocol.AuthXor();
-			break;
-		case MemcardCommand::AUTH_F3:
-			g_MemoryCardProtocol.AuthF3();
-			break;
-		case MemcardCommand::AUTH_F7:
-			g_MemoryCardProtocol.AuthF7();
-			break;
-		default:
-			Console.Warning("%s() Unhandled memcard command %02X, things are about to break!", __FUNCTION__, commandByte);
-			break;
+		g_Sio2FifoIn.pop_front();
+		g_Sio2FifoOut.push_back(0xFF);
 	}
 }
 
 void Sio2::Write(u8 data)
 {
-	Sio2Log.WriteLn("%s(%02X) SIO2 DATA Write", __FUNCTION__, data);
+	Sio2Log.WriteLn("%s(%02X)", __FUNCTION__, data);
 
 	if (!send3Read)
 	{
@@ -422,28 +372,26 @@ void Sio2::Write(u8 data)
 		g_Sio2.send3Read = false;
 		g_Sio2.send3Position++;
 
-		// Check the SIO mode
-		const u8 sioMode = g_Sio2FifoIn.front();
-		g_Sio2FifoIn.pop_front();
+		// Check the command type to determine which device to route the command to.
+		const Sio::CommandType commandType = static_cast<Sio::CommandType>(g_Sio2FifoIn.front());
 
-		switch (sioMode)
+		switch (commandType)
 		{
-			case SioMode::PAD:
+			case Sio::CommandType::PAD:
 				this->Pad();
 				break;
-			case SioMode::MULTITAP:
+			case Sio:: CommandType::MULTITAP:
 				this->Multitap();
 				break;
-			case SioMode::INFRARED:
+			case Sio::CommandType::INFRARED:
 				this->Infrared();
 				break;
-			case SioMode::MEMCARD:
+			case Sio::CommandType::MEMCARD:
 				this->Memcard();
 				break;
 			default:
-				Console.Error("%s(%02X) Unhandled SIO mode %02X", __FUNCTION__, data, sioMode);
-				g_Sio2FifoOut.push_back(0xff);
-				SetRecv1(Recv1::DISCONNECTED);
+				Console.Error("%s Unhandled command type %02X", __FUNCTION__, static_cast<u8>(commandType));
+				this->InvalidDevice();
 				break;
 		}
 
@@ -458,7 +406,7 @@ void Sio2::Write(u8 data)
 
 				for (size_t i = 0; i < padding; i++)
 				{
-					g_Sio2FifoOut.push_back(0x00);
+					g_Sio2FifoOut.push_back(0xFF);
 				}
 			}
 		}
@@ -469,17 +417,28 @@ u8 Sio2::Read()
 {
 	u8 ret = 0xff;
 
+	if (this->dmaBlockSize > 0)
+	{
+		if (this->readCounter % this->dmaBlockSize == 0)
+		{
+			Sio2Log.WriteLn("== New DMA block ==");
+		}
+
+		this->readCounter++;
+	}
+
 	if (!g_Sio2FifoOut.empty())
 	{
 		ret = g_Sio2FifoOut.front();
 		g_Sio2FifoOut.pop_front();
+		Sio2Log.WriteLn("%s() (%02X)", __FUNCTION__, ret);
 	}
 	else
 	{
-		Console.Warning("%s() g_Sio2FifoOut underflow! Returning 0xff.", __FUNCTION__);
+		//DevCon.Warning("%s() g_Sio2FifoOut underflow! Returning 0xff.", __FUNCTION__);
+		Sio2Log.WriteLn("%s() (%02X) (fifo empty)", __FUNCTION__, ret);
 	}
 
-	Sio2Log.WriteLn("%s() SIO2 DATA Read (%02X)", __FUNCTION__, ret);
 	return ret;
 }
 
