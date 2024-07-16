@@ -36,6 +36,7 @@
 #include "SIO/Sio.h"
 #include "SIO/Sio0.h"
 #include "SIO/Sio2.h"
+#include "SIO/Memcard/Memcard.h"
 #include "SPU2/spu2.h"
 #include "SupportURLs.h"
 #include "USB/USB.h"
@@ -1120,7 +1121,7 @@ void VMManager::UpdateDiscDetails(bool booting)
 		Achievements::GameChanged(s_disc_crc, s_current_crc);
 		ReloadPINE();
 		UpdateDiscordPresence(s_state.load(std::memory_order_relaxed) == VMState::Initializing);
-		FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
+		//FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
 	}
 }
 
@@ -1500,6 +1501,14 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	}
 	ScopedGuard close_pad = &Pad::Shutdown;
 
+	Console.WriteLn("Initializing Memcard...");
+	if (!Memcard::Initialize())
+	{
+		Host::ReportErrorAsync("Startup Error", "Failed to initialize Memcard");
+		return false;
+	}
+	ScopedGuard close_memcard = &Memcard::Shutdown;
+
 	Console.WriteLn("Initializing SIO2...");
 	if (!g_Sio2.Initialize())
 	{
@@ -1552,11 +1561,12 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	close_usb.Cancel();
 	close_dev9.Cancel();
 	close_pad.Cancel();
+	close_memcard.Cancel();
 	close_sio2.Cancel();
 	close_sio0.Cancel();
 	close_spu2.Cancel();
 	close_gs.Cancel();
-	close_memcards.Cancel();
+	//close_memcards.Cancel();
 	close_cdvd.Cancel();
 	close_cdvd_files.Cancel();
 	close_state.Cancel();
@@ -1639,6 +1649,7 @@ void VMManager::Shutdown(bool save_resume_state)
 	USBclose();
 	SPU2::Close();
 	Pad::Shutdown();
+	Memcard::Shutdown();
 	g_Sio2.Shutdown();
 	g_Sio0.Shutdown();
 	MemcardBusy::ClearBusy();
