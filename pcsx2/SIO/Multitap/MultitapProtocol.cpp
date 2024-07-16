@@ -20,21 +20,21 @@ void MultitapProtocol::SupportCheck()
 
 	if (EmuConfig.Pad.IsMultitapPortEnabled(g_Sio2.port))
 	{
-		g_Sio2FifoOut.push_back(0xff);
+		g_Sio2FifoOut.push_back(0xFF);
 		g_Sio2FifoOut.push_back(0x80);
-		g_Sio2FifoOut.push_back(0x5a);
+		g_Sio2FifoOut.push_back(0x5A);
 		g_Sio2FifoOut.push_back(0x04);
 		g_Sio2FifoOut.push_back(0x00);
-		g_Sio2FifoOut.push_back(0x5a);
+		g_Sio2FifoOut.push_back(0x5A);
 	}
 	else
 	{
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
 	}
 }
 
@@ -65,23 +65,23 @@ void MultitapProtocol::Select(MultitapMode mode)
 			MT_LOG.WriteLn("Slot changed to %d", newSlot);
 		}
 
-		g_Sio2FifoOut.push_back(0xff);
+		g_Sio2FifoOut.push_back(0xFF);
 		g_Sio2FifoOut.push_back(0x80);
-		g_Sio2FifoOut.push_back(0x5a);
+		g_Sio2FifoOut.push_back(0x5A);
 		g_Sio2FifoOut.push_back(0x00);
 		g_Sio2FifoOut.push_back(0x00);
-		g_Sio2FifoOut.push_back(isInBounds ? newSlot : 0xff);
-		g_Sio2FifoOut.push_back(isInBounds ? 0x5a : 0x66);
+		g_Sio2FifoOut.push_back(isInBounds ? newSlot : 0xFF);
+		g_Sio2FifoOut.push_back(isInBounds ? 0x5A : 0x66);
 	}
 	else
 	{
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
-		g_Sio2FifoOut.push_back(0xff);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
+		g_Sio2FifoOut.push_back(0xFF);
 	}
 }
 
@@ -122,6 +122,9 @@ u8 MultitapProtocol::GetMemcardSlot()
 
 void MultitapProtocol::SendToMultitap()
 {
+	// Pop the lead byte, we do not care about it here.
+	// The SupportCheck or Select function will push the FIFO OUT byte for it.
+	g_Sio2FifoIn.pop_front();
 	const u8 commandByte = g_Sio2FifoIn.front();
 	g_Sio2FifoIn.pop_front();
 
