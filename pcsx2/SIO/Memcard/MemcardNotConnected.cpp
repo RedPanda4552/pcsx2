@@ -6,6 +6,51 @@
 #include "SIO/Sio2.h"
 #include "SIO/Sio0.h"
 
+bool Seek(u32 addr)
+{
+	return false;
+}
+
+bool SeekFile(u32 addr)
+{
+	return false;
+}
+
+bool SeekFolder(u32 addr)
+{
+	return false;
+}
+
+void Write(u32 addr, std::vector<u8>& src)
+{
+
+}
+
+void WriteFile(u32 addr, std::vector<u8>& src)
+{
+
+}
+
+void WriteFolder(u32 addr, std::vector<u8>& src)
+{
+
+}
+
+void Read(u32 addr, std::vector<u8>& dest)
+{
+
+}
+
+void ReadFile(u32 addr, std::vector<u8>& dest)
+{
+
+}
+
+void ReadFolder(u32 addr, std::vector<u8>& dest)
+{
+
+}
+
 MemcardNotConnected::MemcardNotConnected(u32 unifiedSlot)
 	: MemcardBase(unifiedSlot, "")
 {

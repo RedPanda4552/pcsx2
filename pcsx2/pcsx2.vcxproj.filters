@@ -1412,15 +1412,6 @@
     <ClCompile Include="SIO\Memcard\MemcardPS2.cpp">
       <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
     </ClCompile>
-    <ClCompile Include="SIO\Memcard\MemcardHostBase.cpp">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClCompile>
-    <ClCompile Include="SIO\Memcard\MemcardHostFile.cpp">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClCompile>
-    <ClCompile Include="SIO\Memcard\MemcardHostFolder.cpp">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClCompile>
     <ClCompile Include="DebugTools\SymbolGuardian.cpp">
       <Filter>System\Ps2\Debug</Filter>
     </ClCompile>
@@ -2383,15 +2374,6 @@
       <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
     </ClInclude>
     <ClInclude Include="SIO\Memcard\MemcardPS2.h">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClInclude>
-    <ClInclude Include="SIO\Memcard\MemcardHostBase.h">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClInclude>
-    <ClInclude Include="SIO\Memcard\MemcardHostFile.h">
-      <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
-    </ClInclude>
-    <ClInclude Include="SIO\Memcard\MemcardHostFolder.h">
       <Filter>System\Ps2\Iop\SIO\Memcard</Filter>
     </ClInclude>
     <ClInclude Include="ImGui\ImGuiAnimated.h" />

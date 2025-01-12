@@ -2,7 +2,6 @@
 #pragma once
 
 class MemcardBase;
-class MemcardHostBase;
 
 namespace Memcard
 {
@@ -39,7 +38,10 @@ namespace Memcard
 		AUTH_F7 = 0xf7
 	};
 
-	enum class HostType
+	// The storage type to use on the host PC. 
+	// - File type uses a single to emulate the entire memcard as a continuous binary blob
+	// - Folder type uses a folder on the host filesystem to rebuild the PS2 filesystem on the PC
+	enum class StorageType
 	{
 		NOT_SET = 0,
 		FILE = 1,

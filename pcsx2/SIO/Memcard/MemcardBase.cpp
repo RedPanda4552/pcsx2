@@ -3,34 +3,49 @@
 
 #include "SIO/Memcard/MemcardBase.h"
 
-#include "SIO/Memcard/MemcardHostFile.h"
-#include "SIO/Memcard/MemcardHostFolder.h"
-
 #include "common/FileSystem.h"
 #include "common/Path.h"
 #include "Host.h"
 #include "fmt/core.h"
 #include "IconsFontAwesome5.h"
 
+bool MemcardBase::IsOpened()
+{
+	switch (this->storageType)
+	{
+		case Memcard::StorageType::FILE:
+		{
+			return this->filePtr;
+		}
+		case Memcard::StorageType::FOLDER:
+		{
+			return true;
+		}
+		default:
+		{
+			return false;
+		}
+	}
+}
+
 MemcardBase::MemcardBase(u32 unifiedSlot, std::string fullPath)
 {
 	this->unifiedSlot = unifiedSlot;
+	this->fullPath = fullPath;
 	this->autoEjectTicks = 0;
 	this->lastWriteTime = std::chrono::system_clock::now();
 	
-	if (fullPath == "")
+	if (fullPath.empty())
 	{
-		return;
+		this->storageType = Memcard::StorageType::NOT_SET;
 	}
 	else if (FileSystem::FileExists(fullPath.c_str()))
 	{
-		this->hostType = Memcard::HostType::FILE;
-		this->memcardHost = std::make_unique<MemcardHostFile>(fullPath);
+		this->storageType = Memcard::StorageType::FILE;
 	}
 	else if (FileSystem::DirectoryExists(fullPath.c_str()))
 	{
-		this->hostType = Memcard::HostType::FOLDER;
-		this->memcardHost = std::make_unique<MemcardHostFolder>(fullPath);
+		this->storageType = Memcard::StorageType::FOLDER;
 	}
 }
 
@@ -39,11 +54,6 @@ MemcardBase::~MemcardBase() = default;
 u32 MemcardBase::GetUnifiedSlot()
 {
 	return this->unifiedSlot;
-}
-
-MemcardHostBase* MemcardBase::GetHost()
-{
-	return this->memcardHost.get();
 }
 
 void MemcardBase::SendWriteMessageToHost()
@@ -59,7 +69,7 @@ void MemcardBase::SendWriteMessageToHost()
 			ICON_FA_SD_CARD,
 			fmt::format(
 				TRANSLATE_FS("MemoryCard", "Memory Card '{}' written to storage."),
-				Path::GetFileName(this->memcardHost->GetPath())),
+				Path::GetFileName(this->fullPath)),
 			Host::OSD_INFO_DURATION);
 		this->lastWriteTime = std::chrono::system_clock::now();
 	}
