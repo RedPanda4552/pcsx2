@@ -6,47 +6,47 @@
 #include "SIO/Sio2.h"
 #include "SIO/Sio0.h"
 
-bool Seek(u32 addr)
+bool MemcardNotConnected::Seek(u32 addr)
 {
 	return false;
 }
 
-bool SeekFile(u32 addr)
+bool MemcardNotConnected::SeekFile(u32 addr)
 {
 	return false;
 }
 
-bool SeekFolder(u32 addr)
+bool MemcardNotConnected::SeekFolder(u32 addr)
 {
 	return false;
 }
 
-void Write(u32 addr, std::vector<u8>& src)
+void MemcardNotConnected::Write(u32 addr, std::vector<u8>& src)
 {
-
+	
 }
 
-void WriteFile(u32 addr, std::vector<u8>& src)
+void MemcardNotConnected::WriteFile(u32 addr, std::vector<u8>& src)
 {
-
+	
 }
 
-void WriteFolder(u32 addr, std::vector<u8>& src)
+void MemcardNotConnected::WriteFolder(u32 addr, std::vector<u8>& src)
 {
-
+	
 }
 
-void Read(u32 addr, std::vector<u8>& dest)
+void MemcardNotConnected::Read(u32 addr, std::vector<u8>& dest)
 {
-
+	memset(dest.data(), dest.size(), 0xFF);
 }
 
-void ReadFile(u32 addr, std::vector<u8>& dest)
+void MemcardNotConnected::ReadFile(u32 addr, std::vector<u8>& dest)
 {
-
+	
 }
 
-void ReadFolder(u32 addr, std::vector<u8>& dest)
+void MemcardNotConnected::ReadFolder(u32 addr, std::vector<u8>& dest)
 {
 
 }
