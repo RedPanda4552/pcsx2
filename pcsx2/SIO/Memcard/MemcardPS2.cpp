@@ -121,7 +121,7 @@ void MemcardPS2::WriteData()
 	const u8 writeLength = g_Sio2FifoIn.front();
 	g_Sio2FifoIn.pop_front();
 
-	if (this->currentAddr + writeLength >= this->lastClearedEraseBlockAddr + MemcardPS2::ERASE_BLOCK_LENGTH);
+	if (this->currentAddr + writeLength >= this->lastClearedEraseBlockAddr + MemcardPS2::ERASE_BLOCK_LENGTH)
 	{
 		Console.Warning(
 			"%s Write outside of cleared erase block! Write addr = 0x%08X, len = %d; erase block addr = 0x%08X, len = %d", 
@@ -451,7 +451,7 @@ MemcardPS2::MemcardPS2(u32 unifiedSlot, std::string fullPath)
 
 			if (!sizeMatches)
 			{
-				Console.Warning("%s Irregular memcard file size detected (%s)", __FUNCTION__, fullPath);
+				Console.Warning("%s Irregular memcard file size detected (%s)", __FUNCTION__, fullPath.c_str());
 			}
 		}
 
