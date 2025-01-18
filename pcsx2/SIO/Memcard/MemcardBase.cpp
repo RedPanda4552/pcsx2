@@ -42,6 +42,7 @@ MemcardBase::MemcardBase(u32 unifiedSlot, std::string fullPath)
 	else if (FileSystem::FileExists(fullPath.c_str()))
 	{
 		this->storageType = Memcard::StorageType::FILE;
+		this->filePtr = FileSystem::OpenSharedCFile(this->fullPath.c_str(), "r+b", FileSystem::FileShareMode::DenyWrite);
 	}
 	else if (FileSystem::DirectoryExists(fullPath.c_str()))
 	{
@@ -49,7 +50,13 @@ MemcardBase::MemcardBase(u32 unifiedSlot, std::string fullPath)
 	}
 }
 
-MemcardBase::~MemcardBase() = default;
+MemcardBase::~MemcardBase()
+{
+	if (this->filePtr)
+	{
+		std::fclose(this->filePtr);
+	}
+}
 
 u32 MemcardBase::GetUnifiedSlot()
 {
