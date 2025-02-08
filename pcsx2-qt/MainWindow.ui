@@ -68,6 +68,7 @@
       <iconset theme="floppy-in-line"/>
      </property>
     </widget>
+    <addaction name="actionStartShuffle"/>
     <addaction name="actionStartFile"/>
     <addaction name="actionStartDisc"/>
     <addaction name="actionStartBios"/>
@@ -246,6 +247,7 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionToolbarStartShuffle"/>
    <addaction name="actionToolbarStartFile"/>
    <addaction name="actionToolbarStartDisc"/>
    <addaction name="actionToolbarStartBios"/>
@@ -268,6 +270,22 @@
    <addaction name="actionToolbarControllerSettings"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionStartShuffle">
+   <property name="icon">
+    <iconset theme="file-line"/>
+   </property>
+   <property name="text">
+    <string>Start S&amp;huffle</string>
+   </property>
+  </action>
+  <action name="actionToolbarStartShuffle">
+   <property name="icon">
+    <iconset theme="file-line"/>
+   </property>
+   <property name="text">
+    <string comment="In Toolbar">Start Shuffle</string>
+   </property>
+  </action>
   <action name="actionStartFile">
    <property name="icon">
     <iconset theme="file-line"/>

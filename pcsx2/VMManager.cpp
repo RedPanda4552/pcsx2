@@ -187,6 +187,10 @@ static bool s_target_speed_can_sync_to_host = false;
 static bool s_target_speed_synced_to_host = false;
 static bool s_use_vsync_for_timing = false;
 
+static s32 s_ShuffleCurrentEntry = -1;
+static s32 s_ShuffleFrameCount = 0;
+static s32 s_ShuffleFrameLimit = 0;
+
 // Used to track play time. We use a monotonic timer here, in case of clock changes.
 static u64 s_session_resume_timestamp = 0;
 static u64 s_session_accumulated_playtime = 0;
@@ -1578,6 +1582,7 @@ bool VMManager::Initialize(VMBootParameters boot_params)
 	}
 
 	PerformanceMetrics::Clear();
+	ShuffleInit();
 	return true;
 }
 
@@ -2795,6 +2800,8 @@ void VMManager::Internal::EntryPointCompilingOnCPUThread()
 
 void VMManager::Internal::VSyncOnCPUThread()
 {
+	ShuffleVsync();
+
 	Pad::UpdateMacroButtons();
 
 	Patch::ApplyLoadedPatches(Patch::PPT_CONTINUOUSLY);
@@ -3676,4 +3683,94 @@ void VMManager::PollDiscordPresence()
 		return;
 
 	Discord_RunCallbacks();
+}
+
+void VMManager::ShuffleInit()
+{
+	// Generate inital shuffle limiter
+	std::srand(std::time(0));
+	s_ShuffleFrameLimit = 60 * ((std::rand() % 30) + 30);
+
+	const u32 entryCount = GameList::GetEntryCount();
+
+	const std::string serial = VMManager::GetDiscSerial();
+	const u32 crc = VMManager::GetDiscCRC();
+
+	for (u32 i = 0; i < entryCount; i++)
+	{
+		const GameList::Entry* entry = GameList::GetEntryByIndex(i);
+
+		if (std::strcmp(serial.c_str(), entry->serial.c_str()) == 0 && crc == entry->crc)
+		{
+			s_ShuffleCurrentEntry = i;
+			break;
+		}
+	}
+}
+
+void VMManager::ShuffleVsync()
+{
+	// Check if it is time to shuffle
+	if (s_ShuffleFrameCount++ > s_ShuffleFrameLimit && !MemcardBusy::IsBusy())
+	{
+		s_ShuffleFrameCount = 0;
+		const u32 entryCount = GameList::GetEntryCount();
+
+		// RNG to decide new limit and which game to swap to next.
+		std::srand(std::time(0));
+		s_ShuffleFrameLimit = 60 * ((std::rand() % 30) + 30);
+
+		int entryIndex = -1;
+
+		do
+		{
+			entryIndex = std::rand() % entryCount;
+		}
+		while (entryIndex == s_ShuffleCurrentEntry);
+
+		const GameList::Entry* prevEntry = GameList::GetEntryByIndex(s_ShuffleCurrentEntry);
+		const GameList::Entry* nextEntry = GameList::GetEntryByIndex(entryIndex);
+
+		if (!nextEntry)
+		{
+			Host::AddKeyedOSDMessage("ShuffleOOB", "Shuffle tried to access an out-of-bounds entry, please tell a developer you saw this message", 5.0F);
+			return;
+		}
+
+		const std::string saveStateName = Path::Combine(EmuFolders::Savestates, fmt::format("{}_{:x}_shuffler.p2s", prevEntry->serial, prevEntry->crc));
+		bool saveRes = VMManager::SaveState(saveStateName.c_str(), false, false);
+
+		if (!saveRes)
+		{
+			Host::AddKeyedOSDMessage("ShuffleSaveFail", "Shuffle failed to save state, things are probably going to break!", 5.0F);
+			return;
+		}
+
+		bool discRes = VMManager::ChangeDisc(CDVD_SourceType::Iso, nextEntry->path);
+
+		if (!discRes)
+		{
+			Host::AddKeyedOSDMessage("ShuffleChangeFail", "Shuffle failed to swap discs, aborting!", 5.0F);
+			return;
+		}
+
+		const std::string loadStateName = Path::Combine(EmuFolders::Savestates, fmt::format("{}_{:x}_shuffler.p2s", nextEntry->serial, nextEntry->crc));
+
+		if (FileSystem::FileExists(loadStateName.c_str()))
+		{
+			bool loadRes = VMManager::LoadState(loadStateName.c_str());
+
+			if (!loadRes)
+			{
+				Host::AddKeyedOSDMessage("ShuffleLoadFail", "Shuffle failed to load state, things are probably going to break!", 5.0F);
+				return;
+			}
+		}
+		else
+		{
+			VMManager::Reset();
+		}
+
+		s_ShuffleCurrentEntry = entryIndex;
+	}
 }

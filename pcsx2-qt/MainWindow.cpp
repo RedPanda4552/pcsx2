@@ -289,6 +289,7 @@ void MainWindow::setupAdditionalUi()
 
 void MainWindow::connectSignals()
 {
+	connect(m_ui.actionStartShuffle, &QAction::triggered, this, &MainWindow::onStartShuffleActionTriggered);
 	connect(m_ui.actionStartFile, &QAction::triggered, this, &MainWindow::onStartFileActionTriggered);
 	connect(m_ui.actionStartDisc, &QAction::triggered, this, &MainWindow::onStartDiscActionTriggered);
 	connect(m_ui.actionStartBios, &QAction::triggered, this, &MainWindow::onStartBIOSActionTriggered);
@@ -302,6 +303,7 @@ void MainWindow::connectSignals()
 	connect(m_ui.actionPowerOffWithoutSaving, &QAction::triggered, this, [this]() { requestShutdown(false, false, false); });
 	connect(m_ui.actionStartFullscreenUI, &QAction::triggered, this, &MainWindow::onStartFullscreenUITriggered);
 	connect(m_ui.actionToolbarStartFullscreenUI, &QAction::triggered, this, &MainWindow::onStartFullscreenUITriggered);
+	connect(m_ui.actionToolbarStartShuffle, &QAction::triggered, this, &MainWindow::onStartShuffleActionTriggered);
 	connect(m_ui.actionToolbarStartFile, &QAction::triggered, this, &MainWindow::onStartFileActionTriggered);
 	connect(m_ui.actionToolbarStartDisc, &QAction::triggered, this, &MainWindow::onStartDiscActionTriggered);
 	connect(m_ui.actionToolbarStartBios, &QAction::triggered, this, &MainWindow::onStartBIOSActionTriggered);
@@ -862,9 +864,11 @@ void MainWindow::updateEmulationActions(bool starting, bool running, bool stoppi
 {
 	const bool starting_or_running_or_stopping = starting || running || stopping;
 
+	m_ui.actionStartShuffle->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionStartFile->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionStartDisc->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionStartBios->setDisabled(starting_or_running_or_stopping);
+	m_ui.actionToolbarStartShuffle->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionToolbarStartFile->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionToolbarStartDisc->setDisabled(starting_or_running_or_stopping);
 	m_ui.actionToolbarStartBios->setDisabled(starting_or_running_or_stopping);
@@ -1419,6 +1423,30 @@ void MainWindow::onGameListEntryContextMenuRequested(const QPoint& point)
 		[this]() { getSettingsWindow()->getGameListSettingsWidget()->addSearchDirectory(this); });
 
 	menu.exec(point);
+}
+
+void MainWindow::onStartShuffleActionTriggered()
+{
+	const GameList::Entry* entry = m_game_list_widget->getSelectedEntry();
+
+	if (!entry)
+	{
+		QMessageBox::warning(this, tr("No Starting Game Selected"), tr("Please select a game from your games list, then select Start Shuffle."));
+		return;
+	}
+
+	std::shared_ptr<VMBootParameters> params = std::make_shared<VMBootParameters>();
+	params->source_type = CDVD_SourceType::Iso;
+	params->filename = entry->path;
+
+	const std::string stateName = Path::Combine(EmuFolders::Savestates, fmt::format("{}_{:x}_shuffler.p2s", entry->serial, entry->crc));
+
+	if (FileSystem::FileExists(stateName.c_str()))
+	{
+		params->save_state = stateName;
+	}
+
+	g_emu_thread->startVM(std::move(params));
 }
 
 void MainWindow::onStartFileActionTriggered()

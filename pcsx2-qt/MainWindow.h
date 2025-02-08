@@ -135,6 +135,7 @@ private Q_SLOTS:
 	void onGameListEntryActivated();
 	void onGameListEntryContextMenuRequested(const QPoint& point);
 
+	void onStartShuffleActionTriggered();
 	void onStartFileActionTriggered();
 	void onStartDiscActionTriggered();
 	void onStartBIOSActionTriggered();

@@ -230,6 +230,12 @@ namespace VMManager
 	/// Called when the rich presence string, provided by RetroAchievements, changes.
 	void UpdateDiscordPresence(bool update_session_time);
 
+	// Called once on init to start up the shuffle system, if enabled
+	void ShuffleInit();
+
+	// Called on vsync to update shuffle status
+	void ShuffleVsync();
+
 	/// Internal callbacks, implemented in the emu core.
 	namespace Internal
 	{
