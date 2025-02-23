@@ -11,7 +11,7 @@ private:
 	Memcard::Command currentCommand = Memcard::Command::NOT_SET;
 
 public:
-	MemcardPS1(u32 unifiedSlot, std::string fullPath);
+	MemcardPS1(u32 unifiedSlot);
 	~MemcardPS1();
 
 	Memcard::Type GetType() override;

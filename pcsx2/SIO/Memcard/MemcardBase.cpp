@@ -12,26 +12,11 @@
 #include "fmt/core.h"
 #include "IconsFontAwesome5.h"
 
-MemcardBase::MemcardBase(u32 unifiedSlot, std::string fullPath)
+MemcardBase::MemcardBase(u32 unifiedSlot)
 {
 	this->unifiedSlot = unifiedSlot;
 	this->autoEjectTicks = 0;
 	this->lastWriteTime = std::chrono::system_clock::now();
-	
-	if (fullPath == "")
-	{
-		return;
-	}
-	else if (FileSystem::FileExists(fullPath.c_str()))
-	{
-		this->hostType = Memcard::HostType::FILE;
-		this->memcardHost = std::make_unique<MemcardHostFile>(fullPath);
-	}
-	else if (FileSystem::DirectoryExists(fullPath.c_str()))
-	{
-		this->hostType = Memcard::HostType::FOLDER;
-		this->memcardHost = std::make_unique<MemcardHostFolder>(fullPath);
-	}
 }
 
 MemcardBase::~MemcardBase() = default;
@@ -39,11 +24,6 @@ MemcardBase::~MemcardBase() = default;
 u32 MemcardBase::GetUnifiedSlot()
 {
 	return this->unifiedSlot;
-}
-
-MemcardHostBase* MemcardBase::GetHost()
-{
-	return this->memcardHost.get();
 }
 
 void MemcardBase::SendWriteMessageToHost()
@@ -59,7 +39,7 @@ void MemcardBase::SendWriteMessageToHost()
 			ICON_FA_SD_CARD,
 			fmt::format(
 				TRANSLATE_FS("MemoryCard", "Memory Card '{}' written to storage."),
-				Path::GetFileName(this->memcardHost->GetPath())),
+				Path::GetFileName(this->GetMemcardHost()->GetPath())),
 			Host::OSD_INFO_DURATION);
 		this->lastWriteTime = std::chrono::system_clock::now();
 	}
@@ -73,4 +53,9 @@ u32 MemcardBase::GetAutoEjectTicks()
 void MemcardBase::SetAutoEject()
 {
 	this->autoEjectTicks = 100;
+}
+
+MemcardHostBase* MemcardBase::GetMemcardHost()
+{
+	return Memcard::GetMemcardHost(this->unifiedSlot);
 }

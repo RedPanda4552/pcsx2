@@ -3,8 +3,8 @@
 
 #include "SIO/Memcard/MemcardPS1.h"
 
-MemcardPS1::MemcardPS1(u32 unifiedSlot, std::string fullPath)
-	: MemcardBase(unifiedSlot, fullPath)
+MemcardPS1::MemcardPS1(u32 unifiedSlot)
+	: MemcardBase(unifiedSlot)
 {
 
 }
