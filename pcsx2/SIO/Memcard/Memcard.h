@@ -55,4 +55,6 @@ namespace Memcard
 
 	MemcardBase* GetMemcard(const u32 unifiedSlot);
 	MemcardBase* GetMemcard(const u32 port, const u32 slot);
+	MemcardHostBase* GetMemcardHost(const u32 unifiedSlot);
+	MemcardHostBase* GetMemcardHost(const u32 port, const u32 slot);
 } // namespace Memcard

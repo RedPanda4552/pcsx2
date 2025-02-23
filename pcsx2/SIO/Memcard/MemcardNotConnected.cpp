@@ -7,7 +7,7 @@
 #include "SIO/Sio0.h"
 
 MemcardNotConnected::MemcardNotConnected(u32 unifiedSlot)
-	: MemcardBase(unifiedSlot, "")
+	: MemcardBase(unifiedSlot)
 {
 
 }
@@ -16,6 +16,11 @@ MemcardNotConnected::~MemcardNotConnected() = default;
 Memcard::Type MemcardNotConnected::GetType()
 {
 	return Memcard::Type::NOT_CONNECTED;
+}
+
+bool MemcardNotConnected::ValidateCapacity()
+{
+	return true;
 }
 
 // No-op. Let SIO2 and SIO0 sit with no response.

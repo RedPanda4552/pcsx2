@@ -82,9 +82,10 @@ private:
 	void AuthF7();
 
 public:
-	MemcardPS2(u32 unifiedSlot, std::string fullPath);
+	MemcardPS2(u32 unifiedSlot);
 	~MemcardPS2();
 
 	Memcard::Type GetType() override;
+	bool ValidateCapacity() override;
 	void ExecuteCommand() override;
 };

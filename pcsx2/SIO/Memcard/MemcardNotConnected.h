@@ -13,5 +13,6 @@ public:
 	~MemcardNotConnected();
 
 	Memcard::Type GetType() override;
+	bool ValidateCapacity() override;
 	void ExecuteCommand() override;
 };
