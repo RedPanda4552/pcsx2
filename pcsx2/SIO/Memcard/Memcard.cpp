@@ -24,7 +24,7 @@ namespace Memcard
 
 bool Memcard::Initialize()
 {
-	for (auto i = 0; i < Memcard::MAX_SLOTS; i++)
+	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
 	{
 		const std::string fileName = EmuConfig.Mcd[i].Filename;
 
