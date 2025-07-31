@@ -30,6 +30,10 @@ static const InputBindingInfo s_bindings[] = {
 };
 
 static const SettingInfo s_settings[] = {
+	{SettingInfo::Type::Float, "ButtonDeadzone", TRANSLATE_NOOP("Pad", "Button/Trigger Deadzone"),
+		TRANSLATE_NOOP("Pad", "Sets the deadzone for activating buttons/triggers, i.e. the fraction of the trigger "
+							  "which will be ignored."),
+		"0.00", "0.00", "1.00", "0.01", TRANSLATE_NOOP("Pad", "%.0f%%"), nullptr, nullptr, 100.0f},
 	{SettingInfo::Type::Float, "Deadzone", TRANSLATE_NOOP("Pad", "Whammy Bar Deadzone"),
 		TRANSLATE_NOOP("Pad", "Sets the whammy bar deadzone. Inputs below this value will not be sent to the PS2."),
 		"0.00", "0.00", "1.00", "0.01", "%.0f%%", nullptr, nullptr, 100.0f},
