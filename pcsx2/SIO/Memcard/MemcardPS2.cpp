@@ -320,9 +320,11 @@ bool MemcardPS2::ValidateCapacity()
 	
 	if (this->GetMemcardHost() != nullptr)
 	{
-		const u32 fileSize = this->GetMemcardHost()->GetSize();
+		const s64 fileSize = this->GetMemcardHost()->GetSize();
 
-		if (fileSize > 0)
+		// If host type has a real file size, be it a zero byte file or any amount of data,
+		// then check that it matches a possible memcard size for a PS2 card.
+		if (fileSize >= 0)
 		{
 			u32 compareSize = standardFileSize;
 			bool sizeMatches = false;
@@ -339,6 +341,12 @@ bool MemcardPS2::ValidateCapacity()
 			} while (compareSize <= maxFileSize);
 
 			return sizeMatches;
+		}
+		// If the host type is indicating there is no physical size associated with it,
+		// then it is fine to say it is valid; the card will be sized properly in memory when it is set up.
+		else if (fileSize < 0)
+		{
+			return true;
 		}
 	}
 

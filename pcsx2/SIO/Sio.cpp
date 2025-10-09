@@ -165,3 +165,35 @@ void MemcardBusy::CheckSaveStateDependency()
 			TRANSLATE_SV("MemoryCard", "The virtual console hasn't saved to your memory card in a long time.\nSavestates should not be used in place of in-game saves."), Host::OSD_INFO_DURATION);
 	}
 }
+
+u32 SIO::ConvertToUnifiedSlot(const u32 port, const u32 slot)
+{
+	if (slot == 0)
+	{
+		return port; // 0, 1
+	}
+	else if (port == 0)
+	{
+		return slot + 1; // 2,3,4
+	}
+	else
+	{
+		return slot + 4; // 5,6,7
+	}
+}
+
+std::tuple<u32, u32> SIO::ConvertToPortAndSlot(const u32 unifiedSlot)
+{
+	if (unifiedSlot > 4) // [5,6,7]
+	{
+		return std::make_tuple(1, unifiedSlot - 4); // 2B,2C,2D
+	} 
+	else if (unifiedSlot > 1) // [2,3,4]
+	{
+		return std::make_tuple(0, unifiedSlot - 1); // 1B,1C,1D
+	}
+	else // [0,1]
+	{
+		return std::make_tuple(unifiedSlot, 0); // 1A,2A
+	}
+}
