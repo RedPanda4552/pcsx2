@@ -1,17 +1,50 @@
 
 #pragma once
 
+#include <vector>
+
 class MemcardBase;
 class MemcardHostBase;
 
 namespace Memcard
 {
+	constexpr std::array<std::string, 5> MEMCARD_FILE_EXTENSIONS = { ".ps2", ".bin", ".mc2", ".mcd", ".mcr" };
+	
+	// Known virtual memory card file extensions:
+	// .ps2 - PS2 - PCSX2 memory card (raw format)
+	// .bin - PS2 - OpenPS2Loader VMC file (like .ps2, but with no ECC)
+	// .mc2 - PS2 - Memcard PRO2 file (identical to .bin)
+	constexpr std::array<std::string, 3> PS2_MEMCARD_FILE_EXTENSIONS = { ".ps2", ".bin", ".mc2" };
+
+	// .mcd - PS1 - Modern file extension (raw format)
+	// .mcr - PS1 - Legacy file extension (raw format)
+	constexpr std::array<std::string, 2> PS1_MEMCARD_FILE_EXTENSIONS = { ".mcd", ".mcr" };
+
 	enum class Type
 	{
 		NOT_CONNECTED,
 		PS1,
 		POCKETSTATION,
 		PS2
+	};
+
+	enum class HostType
+	{
+		NOT_SET = 0,
+		FILE = 1,
+		FOLDER = 2
+	};
+
+	// Struct to package up a summary of memcard information useful to the frontend for display purposes.
+	struct AvailableMemcardSummary
+	{
+		std::string name;
+		std::string path;
+		std::time_t modified_time;
+		Memcard::Type type;
+		Memcard::HostType hostType;
+		s64 size;
+		bool formatted;
 	};
 
 	enum class Command : u8
@@ -39,12 +72,7 @@ namespace Memcard
 		AUTH_F7 = 0xf7
 	};
 
-	enum class HostType
-	{
-		NOT_SET = 0,
-		FILE = 1,
-		FOLDER = 2
-	};
+	
 	
 	static constexpr u32 MAX_SLOTS = 8;
 	// First byte of any memory card command, PS1 or PS2.
@@ -53,8 +81,17 @@ namespace Memcard
 	bool Initialize();
 	void Shutdown();
 
+	void CreateMemcard(const u32 unifiedSlot);
+	void CreateMemcard(const u32 port, const u32 slot);
+	void InsertMemcard(const u32 unifiedSlot);
+	void InsertMemcard(const u32 port, const u32 slot);
+	void RemoveMemcard(const u32 unifiedSlot);
+	void RemoveMemcard(const u32 port, const u32 slot);
 	MemcardBase* GetMemcard(const u32 unifiedSlot);
 	MemcardBase* GetMemcard(const u32 port, const u32 slot);
 	MemcardHostBase* GetMemcardHost(const u32 unifiedSlot);
 	MemcardHostBase* GetMemcardHost(const u32 port, const u32 slot);
+
+	Memcard::Type GetMemcardType(std::string fullPath);
+	std::vector<Memcard::AvailableMemcardSummary> GetAvailableMemcards(bool includeInUse);
 } // namespace Memcard

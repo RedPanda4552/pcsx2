@@ -2,11 +2,14 @@
 #include "PrecompiledHeader.h"
 
 #include "SIO/Memcard/MemcardHostFile.h"
+#include <cstring>
 
 #include "Common.h"
 #include "common/FileSystem.h"
 #include "common/Error.h"
 #include "Host.h"
+#include "SIO/Memcard/MemcardHostBase.h"
+#include "SIO/Memcard/MemcardPS2.h"
 
 bool MemcardHostFile::Seek(u32 addr)
 {
@@ -26,11 +29,13 @@ MemcardHostFile::MemcardHostFile(std::string path)
 {
 	this->filePtr = FileSystem::OpenSharedCFile(this->path.c_str(), "r+b", FileSystem::FileShareMode::DenyWrite);
 }
+
 MemcardHostFile::~MemcardHostFile()
 {
 	if (this->filePtr)
 	{
 		std::fclose(this->filePtr);
+		this->filePtr = nullptr;
 	}
 }
 
