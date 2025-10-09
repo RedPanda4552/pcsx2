@@ -23,6 +23,8 @@ public:
 	MemcardHostBase* GetMemcardHost();
 
 	virtual Memcard::Type GetType() = 0;
+	// Look up the host associated with this emulated memcard, and check that its size
+	// matches a known good size for this type of emulated memcard.
 	virtual bool ValidateCapacity() = 0;
 	virtual void ExecuteCommand() = 0;
 };

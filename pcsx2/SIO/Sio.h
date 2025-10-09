@@ -134,3 +134,15 @@ namespace MemcardBusy
 	extern void ClearBusy();
 	extern void CheckSaveStateDependency();
 }
+
+namespace SIO
+{
+	// Helper function to fetch a "unified slot" index used frequently in PCSX2.
+	// This is an, arguably, simpler way to address all eight possible slots
+	// without having to traverse two arrays.
+	u32 ConvertToUnifiedSlot(const u32 port, const u32 slot);
+	// Helper function to derive the port and slot for a "unified slot".
+	// Native PS2 libraries almost always reference port and slot individually
+	// and index into nested arrays.
+	std::tuple<u32, u32> ConvertToPortAndSlot(const u32 unifiedSlot);
+} // namespace SIO
