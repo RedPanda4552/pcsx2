@@ -2,7 +2,6 @@
 #include "PrecompiledHeader.h"
 
 #include "SIO/Memcard/MemcardPS2.h"
-#include "SIO/Memcard/MemcardHostBase.h"
 
 #include "SIO/Sio.h"
 #include "SIO/Sio2.h"
@@ -145,7 +144,7 @@ void MemcardPS2::WriteData()
 		g_Sio2FifoOut.push_back(0x00);
 	}
 
-	this->GetMemcardHost()->Write(this->currentAddr, buf);
+	this->Write(this->currentAddr, buf);
 	g_Sio2FifoOut.push_back(checksum);
 	g_Sio2FifoOut.push_back(this->terminator);
 	this->currentAddr += writeLength;
@@ -159,7 +158,7 @@ void MemcardPS2::ReadData()
 	g_Sio2FifoOut.push_back(0x2B);
 	std::vector<u8> buf;
 	buf.resize(readLength);
-	this->GetMemcardHost()->Read(this->currentAddr, buf);
+	this->Read(this->currentAddr, buf);
 	u8 checksum = 0x00;
 
 	for (const u8 readByte : buf)
@@ -192,7 +191,7 @@ void MemcardPS2::EraseBlock()
 	std::vector<u8> clearData;
 	clearData.resize(MemcardPS2::ERASE_BLOCK_LENGTH);
 	memset(clearData.data(), 0xFF, clearData.size());
-	this->GetMemcardHost()->Write(this->currentAddr, clearData);
+	this->Write(this->currentAddr, clearData);
 	this->lastClearedEraseBlockAddr = this->currentAddr;
 
 	g_Sio2FifoOut.push_back(0x2B);
@@ -300,10 +299,10 @@ void MemcardPS2::AuthF7()
 	g_Sio2FifoOut.push_back(this->terminator);
 }
 
-MemcardPS2::MemcardPS2(u32 unifiedSlot)
-	: MemcardBase(unifiedSlot)
+MemcardPS2::MemcardPS2(u32 unifiedSlot, std::string path)
+	: MemcardBase(unifiedSlot, path)
 {
-	this->clusterCount = static_cast<ClusterCount>(this->GetMemcardHost()->GetSize() / (MemcardPS2::PAGE_LENGTH + ECC_LENGTH) / MemcardPS2::PAGES_PER_CLUSTER);
+	this->clusterCount = static_cast<ClusterCount>(this->GetSize() / (MemcardPS2::PAGE_LENGTH + ECC_LENGTH) / MemcardPS2::PAGES_PER_CLUSTER);
 }
 
 MemcardPS2::~MemcardPS2() = default;
@@ -318,39 +317,40 @@ bool MemcardPS2::ValidateCapacity()
 	const u32 standardFileSize = (static_cast<u32>(ClusterCount::x8MB) * MemcardPS2::PAGES_PER_CLUSTER) * (MemcardPS2::PAGE_LENGTH + ECC_LENGTH);
 	const u32 maxFileSize = (static_cast<u32>(ClusterCount::x2048MB) * MemcardPS2::PAGES_PER_CLUSTER) * (MemcardPS2::PAGE_LENGTH + ECC_LENGTH);
 	
-	if (this->GetMemcardHost() != nullptr)
+	const s64 fileSize = this->GetSize();
+
+	// If host type has a real file size, be it a zero byte file or any amount of data,
+	// then check that it matches a possible memcard size for a PS2 card.
+	if (fileSize >= 0)
 	{
-		const s64 fileSize = this->GetMemcardHost()->GetSize();
+		u32 compareSize = standardFileSize;
+		bool sizeMatches = false;
 
-		// If host type has a real file size, be it a zero byte file or any amount of data,
-		// then check that it matches a possible memcard size for a PS2 card.
-		if (fileSize >= 0)
+		do
 		{
-			u32 compareSize = standardFileSize;
-			bool sizeMatches = false;
-
-			do
+			if (fileSize == compareSize)
 			{
-				if (fileSize == compareSize)
-				{
-					sizeMatches = true;
-					break;
-				}
+				sizeMatches = true;
+				break;
+			}
 
-				compareSize *= 2;
-			} while (compareSize <= maxFileSize);
+			compareSize *= 2;
+		} while (compareSize <= maxFileSize);
 
-			return sizeMatches;
-		}
-		// If the host type is indicating there is no physical size associated with it,
-		// then it is fine to say it is valid; the card will be sized properly in memory when it is set up.
-		else if (fileSize < 0)
-		{
-			return true;
-		}
+		return sizeMatches;
+	}
+	// Folders will use -1 to signal they are not a monolithic file with a discrete size.
+	else
+	{
+		return true;
 	}
 
 	return false;
+}
+
+bool MemcardPS2::IsFormatted()
+{
+	// TODO
 }
 
 void MemcardPS2::ExecuteCommand()

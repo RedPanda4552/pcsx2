@@ -3,7 +3,37 @@
 
 #include "SIO/Memcard/MemcardBase.h"
 
-enum class ClusterCount
+constexpr const char* FORMAT_STRING = "Sony PS2 Memory Card Format ";
+constexpr u8 FORMAT_STRING_LENGTH = 28;
+
+// Though spec allows for 512 or 1024, OEM cards only use 512.
+constexpr u16 PAGE_LENGTH = 512;
+// 16 or 32, if page length is 512 or 1024 respectively. OEM cards only use 16.
+constexpr u16 ECC_LENGTH = 16;
+// Can be 2 or 1 if page length is 512, only 1 if page length is 1024. OEM cards only use 2.
+constexpr u8 PAGES_PER_CLUSTER = 2;
+// Can be 16 or less. OEM cards only use 16.
+constexpr u8 PAGES_PER_ERASE_BLOCK = 16;
+// Convenience constant for the length of an erase block in bytes
+constexpr u32 ERASE_BLOCK_LENGTH = PAGES_PER_ERASE_BLOCK * (PAGE_LENGTH + ECC_LENGTH);
+
+// Describes card size in units of erase blocks
+enum class EraseBlockCount : u32
+{
+	NOT_SET = 0x00000000,
+	x8MB = 0x00000400,
+	x16MB = 0x00000800,
+	x32MB = 0x00001000,
+	x64MB = 0x00002000,
+	x128MB = 0x00004000,
+	x256MB = 0x00008000,
+	x512MB = 0x00010000,
+	x1024MB = 0x00020000,
+	x2048MB = 0x00040000
+};
+
+// Describes card size in units of clusters
+enum class ClusterCount : u32
 {
 	NOT_SET = 0x00000000,
 	x8MB = 0x00002000,
@@ -49,22 +79,10 @@ struct Superblock
 class MemcardPS2 : public MemcardBase
 {
 private:
-	// Can be 512 or 1024. OEM cards only use 512 so we will emulate that.
-	static constexpr u16 PAGE_LENGTH = 512;
-	// 16 or 32, if page length is 512 or 1024 respectively.
-	static constexpr u16 ECC_LENGTH = 16;
-	// Can be 2 or 1 if page length is 512, only 1 if page length is 1024. OEM cards only use 2.
-	static constexpr u8 PAGES_PER_CLUSTER = 2;
-	// Can be 16 or less. OEM cards only use 16.
-	static constexpr u8 PAGES_PER_ERASE_BLOCK = 16;
-	// Convenience constant for the length of an erase block in bytes
-	static constexpr u32 ERASE_BLOCK_LENGTH = MemcardPS2::PAGES_PER_ERASE_BLOCK * (MemcardPS2::PAGE_LENGTH + MemcardPS2::ECC_LENGTH);
-
 	u8 terminator = static_cast<u8>(Terminator::READY);
 	u32 currentPage = 0;
 	u32 currentAddr = 0;
 	u32 lastClearedEraseBlockAddr = 0;
-	ClusterCount clusterCount = ClusterCount::NOT_SET;
 
 	void Probe();
 	void WriteDeleteEnd();
@@ -81,11 +99,16 @@ private:
 	void AuthF3();
 	void AuthF7();
 
+protected:
+	EraseBlockCount eraseBlockCount = EraseBlockCount::NOT_SET;
+	ClusterCount clusterCount = ClusterCount::NOT_SET;
+
 public:
-	MemcardPS2(u32 unifiedSlot);
+	MemcardPS2(u32 unifiedSlot, std::string path);
 	~MemcardPS2();
 
 	Memcard::Type GetType() override;
 	bool ValidateCapacity() override;
+	bool IsFormatted() override;
 	void ExecuteCommand() override;
 };
