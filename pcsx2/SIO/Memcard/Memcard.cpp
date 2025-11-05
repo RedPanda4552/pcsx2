@@ -2,26 +2,27 @@
 #include "PrecompiledHeader.h"
 
 #include "SIO/Memcard/Memcard.h"
-#include <memory>
 
-#include "SIO/Memcard/MemoryCardFolder.h"
 #include "SIO/Sio.h"
-#include "SIO/Memcard/MemcardPS2.h"
-#include "SIO/Memcard/MemcardPS1.h"
+#include "SIO/Memcard/MemcardBase.h"
 #include "SIO/Memcard/MemcardNotConnected.h"
-#include "SIO/Memcard/MemcardHostBase.h"
-#include "SIO/Memcard/MemcardHostFile.h"
-#include "SIO/Memcard/MemcardHostFolder.h"
+#include "SIO/Memcard/MemcardPS1.h"
+#include "SIO/Memcard/MemcardPS1File.h"
+#include "SIO/Memcard/MemcardPS2.h"
+#include "SIO/Memcard/MemcardPS2File.h"
+#include "SIO/Memcard/MemcardPS2Folder.h"
 
+#include "Config.h"
 #include "Common.h"
 #include "common/Path.h"
 #include "common/FileSystem.h"
 #include "Host.h"
 
+#include <memory>
+
 // Private items we don't want exposed directly in the Memcard.h header
 namespace Memcard
 {
-	static std::array<std::unique_ptr<MemcardHostBase>, Memcard::MAX_SLOTS> s_memcardHosts;
 	static std::array<std::unique_ptr<MemcardBase>, Memcard::MAX_SLOTS> s_memcards;
 } // namespace Memcard
 
@@ -43,135 +44,152 @@ void Memcard::Shutdown()
 	}
 }
 
-void Memcard::CreateMemcard(const u32 unifiedSlot)
+bool Memcard::CreateMemcard(const u32 unifiedSlot)
 {
 	const std::string fileName = EmuConfig.Mcd[unifiedSlot].Filename;
 	const std::string fullPath = Path::Combine(EmuFolders::MemoryCards, fileName);
+	const MemoryCardType type = EmuConfig.Mcd[unifiedSlot].Type;
+
+	if (fileName.empty())
+	{
+		Host::ReportFormattedErrorAsync("Cannot Create Memory Card", 
+			"Cannot create Memory Card for empty slot (%d)",
+			unifiedSlot
+		);
+
+		return false;
+	}
 
 	if (FileSystem::FileExists(fileName.c_str()) || FileSystem::DirectoryExists(fileName.c_str()))
 	{
 		Host::ReportFormattedErrorAsync("Cannot Create Memory Card", 
-			"Memory Card already exists: \n\n%s\n\n",
+			"Memory Card already exists: \n\n%s",
 			fullPath.c_str()
 		);
+
+		return false;
+	}
+
+	MemcardBase* memcardPtr = s_memcards.at(unifiedSlot).get();
+	CreateResult res = memcardPtr->Create();
+
+	switch (res)
+	{
+		case CreateResult::OK:
+			Console.WriteLn("Created Memory Card: %s (mapped to unified slot %d)", fullPath.c_str(), unifiedSlot);
+			return true;
+		case CreateResult::FAILED_TO_OPEN:
+			Host::ReportFormattedErrorAsync("Cannot Create Memory Card", 
+				"An error occurred while trying to get a file descriptor for path:\n\n%s",
+				fullPath.c_str()
+			);
+			return false;
+		default:
+			Host::ReportFormattedErrorAsync("Cannot Create Memory Card", 
+				"An unhandled error was caught, please report this to the PCSX2 team.\n\n%s",
+				fullPath.c_str()
+			);
+			return false;
 	}
 }
 
-void Memcard::CreateMemcard(const u32 port, const u32 slot)
+bool Memcard::CreateMemcard(const u32 port, const u32 slot)
 {
 	const u32 unifiedSlot = SIO::ConvertToUnifiedSlot(port, slot);
-	return Memcard::InsertMemcard(unifiedSlot);
+	return Memcard::CreateMemcard(unifiedSlot);
 }
 
 // Attempts to insert a memory card into the specified slot.
 // Opens the config and determines what type of memcard to insert depending
 // on what the current filename for the given slot is.
-void Memcard::InsertMemcard(const u32 unifiedSlot)
+bool Memcard::InsertMemcard(const u32 unifiedSlot)
 {
 	const std::string fileName = EmuConfig.Mcd[unifiedSlot].Filename;
+	const std::string fullPath = Path::Combine(EmuFolders::MemoryCards, fileName);
 
 	// If no file name present for this slot, then set as no memcard connected.
 	if (fileName.empty())
 	{
-		s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot);
-		s_memcardHosts.at(unifiedSlot) = nullptr;
+		s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot, fullPath);
+		return true;
 	}
-	// Else, we have a file/folder name present...
-	else
+
+	for (std::string ps2Extension : PS2_MEMCARD_FILE_EXTENSIONS)
 	{
-		const std::string fullPath = Path::Combine(EmuFolders::MemoryCards, fileName);
-
-		// First, determine if the host is a file or folder, and set up a host object for it.
-		if (FileSystem::FileExists(fullPath.c_str()))
+		if (fileName.ends_with(ps2Extension))
 		{
-			s_memcardHosts.at(unifiedSlot) = std::make_unique<MemcardHostFile>(fullPath);
-		}
-		else if (FileSystem::DirectoryExists(fullPath.c_str()))
-		{
-			s_memcardHosts.at(unifiedSlot) = std::make_unique<MemcardHostFolder>(fullPath);
-		}
-		// If the file/folder name specified could not be resolved to an actual existing file/folder,
-		// then wipe back to not connected and warn the user.
-		else
-		{
-			s_memcardHosts.at(unifiedSlot) = nullptr;
-			s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot);
-
-			Host::ReportFormattedErrorAsync("Memory Card", 
-				"Memory Card not found: \n\n%s\n\n"
-				"PCSX2 will treat this memory card as ejected.",
-				fullPath.c_str()
-			);
-			
-			return;
-		}
-
-		// If the host failed to open, then ditch the card
-		if (!s_memcardHosts.at(unifiedSlot)->IsOpened())
-		{
-			s_memcardHosts.at(unifiedSlot) = nullptr;
-			s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot);
-
-			Host::ReportFormattedErrorAsync("Memory Card", 
-				"Could not open memory card: \n\n%s\n\n"
-				"PCSX2 will treat this memory card as ejected. Another instance of PCSX2 may be using this memory card, or you may not have permission to write to this file/folder.\n"
-				"You may be able to fix this by closing any other instances of PCSX2, or restarting your computer.",
-				fullPath.c_str()
-			);
-
-			return;
-		}
-
-		// Now that we know the host is fine, determine what type of emulated memory card we are creating.
-		const Memcard::Type memcardType = Memcard::GetMemcardType(fullPath);
-
-		switch (memcardType)
-		{
-			case Memcard::Type::PS2:
+			if (FileSystem::FileExists(fullPath.c_str()))
 			{
-				s_memcards.at(unifiedSlot) = std::make_unique<MemcardPS2>(unifiedSlot);
-				break;
+				s_memcards.at(unifiedSlot) = std::make_unique<MemcardPS2File>(unifiedSlot, fullPath);
 			}
-			case Memcard::Type::PS1:
+			else if (FileSystem::DirectoryExists(fullPath.c_str()))
 			{
-				s_memcards.at(unifiedSlot) = std::make_unique<MemcardPS1>(unifiedSlot);
-				break;
+				s_memcards.at(unifiedSlot) = std::make_unique<MemcardPS2Folder>(unifiedSlot, fullPath);
 			}
-			default:
+			// If the file/folder name specified could not be resolved to an existing file/folder,
+			// then wipe back to not connected and warn the user.
+			else
 			{
-				s_memcardHosts.at(unifiedSlot) = nullptr;
-				s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot);
-				
-				Host::ReportFormattedErrorAsync("Memory Card", 
-					"Unrecognized file extension: \n\n%s\n\n"
-					"Please check your memory card settings and insert a valid memory card.",
+				s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot, fullPath);
+
+				Host::ReportFormattedErrorAsync("Cannot Insert Memory Card", 
+					"Configured Memory Card not found: \n\n%s\n\n"
+					"PCSX2 will treat this Memory Card as ejected.",
+					fullPath.c_str()
+				);
+			}
+
+			return true;
+		}
+	}
+
+	for (std::string ps1Extension : PS1_MEMCARD_FILE_EXTENSIONS)
+	{
+		if (fileName.ends_with(ps1Extension))
+		{
+			if (FileSystem::FileExists(fullPath.c_str()))
+			{
+				s_memcards.at(unifiedSlot) = std::make_unique<MemcardPS1File>(unifiedSlot, fullPath);
+				return true;
+			}
+			else if (FileSystem::DirectoryExists(fullPath.c_str()))
+			{
+				Host::ReportFormattedErrorAsync("Cannot Insert Memory Card", 
+					"Unsupported memory card type, folders are not supported for PS1\n\n%s\n\n"
+					"PCSX2 will treat this Memory Card as ejected.",
 					fullPath.c_str()
 				);
 
-				return;
+				return false;
 			}
-		}
+			// If the file/folder name specified could not be resolved to an existing file/folder,
+			// then wipe back to not connected and warn the user.
+			else
+			{
+				s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot, fullPath);
 
-		// Validate that the capacity is okay for the type of emulated card
-		MemcardBase* memcard = s_memcards.at(unifiedSlot).get();
+				Host::ReportFormattedErrorAsync("Cannot Insert Memory Card", 
+					"Configured Memory Card not found: \n\n%s\n\n"
+					"PCSX2 will treat this Memory Card as ejected.",
+					fullPath.c_str()
+				);
+			}
 
-		if (!memcard->ValidateCapacity())
-		{
-			s_memcardHosts.at(unifiedSlot) = nullptr;
-			s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot);
-			
-			Host::ReportFormattedErrorAsync("Memory Card", 
-				"Malformed memory card: \n\n%s\n\n"
-				"File size does not match a known memory card size. Please check your memory card settings and insert a valid memory card.",
-				fullPath.c_str()
-			);
-
-			return;
+			return true;
 		}
 	}
+	
+	// If file extension is not valid, control will fall through to here.
+	s_memcards.at(unifiedSlot) = std::make_unique<MemcardNotConnected>(unifiedSlot, fullPath);
+
+	Host::ReportFormattedErrorAsync("Cannot Insert Memory Card", 
+		"Configured Memory Card is not a recognized file extension: \n\n%s\n\n"
+		"PCSX2 will treat this Memory Card as ejected.",
+		fullPath.c_str()
+	);
 }
 
-void Memcard::InsertMemcard(const u32 port, const u32 slot)
+bool Memcard::InsertMemcard(const u32 port, const u32 slot)
 {
 	const u32 unifiedSlot = sioConvertPortAndSlotToPad(port, slot);
 	return Memcard::InsertMemcard(unifiedSlot);
@@ -180,7 +198,6 @@ void Memcard::InsertMemcard(const u32 port, const u32 slot)
 void Memcard::RemoveMemcard(const u32 unifiedSlot)
 {
 	s_memcards.at(unifiedSlot).reset();
-	s_memcardHosts.at(unifiedSlot).reset();
 }
 
 void Memcard::RemoveMemcard(const u32 port, const u32 slot)
@@ -198,17 +215,6 @@ MemcardBase* Memcard::GetMemcard(const u32 port, const u32 slot)
 {
 	const u32 unifiedSlot = sioConvertPortAndSlotToPad(port, slot);
 	return s_memcards.at(unifiedSlot).get();
-}
-
-MemcardHostBase* Memcard::GetMemcardHost(const u32 unifiedSlot)
-{
-	return s_memcardHosts.at(unifiedSlot).get();
-}
-
-MemcardHostBase* Memcard::GetMemcardHost(const u32 port, const u32 slot)
-{
-	const u32 unifiedSlot = sioConvertPortAndSlotToPad(port, slot);
-	return s_memcardHosts.at(unifiedSlot).get();
 }
 
 // Resolve what type of emulated memcard a host file/folder is representing.
@@ -270,8 +276,6 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 			}
 		}
 
-		std::unique_ptr<MemcardHostBase> memcardHost = nullptr;
-
 		// First test if this is a PS2 memory card
 		for (std::string ps2Extension : Memcard::PS2_MEMCARD_FILE_EXTENSIONS)
 		{
@@ -282,10 +286,9 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 				{
 					std::string superblockPath = Path::Combine(fd.FileName, SUPERBLOCK_FILENAME);
 					
-
 					if (FileSystem::FileExists(superblockPath.c_str()))
 					{
-						memcardHost = std::make_unique<MemcardHostFolder>(fd.FileName);
+						std::unique_ptr<MemcardBase> memcard = std::make_unique<MemcardPS2Folder>(0, fd.FileName);
 						summaries.push_back(
 							{
 								std::move(baseName), 
@@ -293,8 +296,8 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 								fd.ModificationTime,
 								Memcard::Type::PS2,
 								Memcard::HostType::FOLDER, 
-								memcardHost->GetSize(), 
-								memcardHost->IsFormatted()
+								memcard->GetSize(), 
+								memcard->IsFormatted()
 							}
 						);
 					}

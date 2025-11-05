@@ -4,7 +4,6 @@
 #include <vector>
 
 class MemcardBase;
-class MemcardHostBase;
 
 namespace Memcard
 {
@@ -24,7 +23,6 @@ namespace Memcard
 	{
 		NOT_CONNECTED,
 		PS1,
-		POCKETSTATION,
 		PS2
 	};
 
@@ -81,16 +79,14 @@ namespace Memcard
 	bool Initialize();
 	void Shutdown();
 
-	void CreateMemcard(const u32 unifiedSlot);
-	void CreateMemcard(const u32 port, const u32 slot);
-	void InsertMemcard(const u32 unifiedSlot);
-	void InsertMemcard(const u32 port, const u32 slot);
+	bool CreateMemcard(const u32 unifiedSlot);
+	bool CreateMemcard(const u32 port, const u32 slot);
+	bool InsertMemcard(const u32 unifiedSlot);
+	bool InsertMemcard(const u32 port, const u32 slot);
 	void RemoveMemcard(const u32 unifiedSlot);
 	void RemoveMemcard(const u32 port, const u32 slot);
 	MemcardBase* GetMemcard(const u32 unifiedSlot);
 	MemcardBase* GetMemcard(const u32 port, const u32 slot);
-	MemcardHostBase* GetMemcardHost(const u32 unifiedSlot);
-	MemcardHostBase* GetMemcardHost(const u32 port, const u32 slot);
 
 	Memcard::Type GetMemcardType(std::string fullPath);
 	std::vector<Memcard::AvailableMemcardSummary> GetAvailableMemcards(bool includeInUse);

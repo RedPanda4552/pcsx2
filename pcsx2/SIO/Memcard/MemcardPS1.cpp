@@ -4,8 +4,8 @@
 #include "SIO/Memcard/MemcardPS1.h"
 #include "SIO/Memcard/MemcardHostBase.h"
 
-MemcardPS1::MemcardPS1(u32 unifiedSlot)
-	: MemcardBase(unifiedSlot)
+MemcardPS1::MemcardPS1(u32 unifiedSlot, std::string path)
+	: MemcardBase(unifiedSlot, path)
 {
 
 }

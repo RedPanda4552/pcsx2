@@ -256,6 +256,11 @@ enum class MemoryCardFileType
 	PS2_16MB,
 	PS2_32MB,
 	PS2_64MB,
+	PS2_128MB,
+	PS2_256MB,
+	PS2_512MB,
+	PS2_1024MB,
+	PS2_2048MB,
 	PS1,
 	MaxCount
 };
