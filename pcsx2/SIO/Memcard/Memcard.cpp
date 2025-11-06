@@ -276,84 +276,64 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 			}
 		}
 
+		std::unique_ptr<MemcardBase> memcard = nullptr;
+		
 		// First test if this is a PS2 memory card
 		for (std::string ps2Extension : Memcard::PS2_MEMCARD_FILE_EXTENSIONS)
 		{
 			if (fd.FileName.ends_with(ps2Extension))
 			{
-				// Now determine if it is a file or folder
+				// If folder
 				if (fd.Attributes & FILESYSTEM_FILE_ATTRIBUTE_DIRECTORY)
 				{
-					std::string superblockPath = Path::Combine(fd.FileName, SUPERBLOCK_FILENAME);
-					
-					if (FileSystem::FileExists(superblockPath.c_str()))
-					{
-						std::unique_ptr<MemcardBase> memcard = std::make_unique<MemcardPS2Folder>(0, fd.FileName);
-						summaries.push_back(
-							{
-								std::move(baseName), 
-								std::move(fd.FileName), 
-								fd.ModificationTime,
-								Memcard::Type::PS2,
-								Memcard::HostType::FOLDER, 
-								memcard->GetSize(), 
-								memcard->IsFormatted()
-							}
-						);
-					}
+					memcard = std::make_unique<MemcardPS2Folder>(0, fd.FileName);
 				}
+				// If file
 				else
 				{
+					memcard = std::make_unique<MemcardPS2File>(0, fd.FileName);
+				}
 
+				break;
+			}
+		}
+
+		// If no PS2 match, then check PS1 next.
+		if (!memcard)
+		{
+			for (std::string ps1Extension : Memcard::PS1_MEMCARD_FILE_EXTENSIONS)
+			{
+				if (fd.FileName.ends_with(ps1Extension))
+				{
+					// If folder
+					if (fd.Attributes & FILESYSTEM_FILE_ATTRIBUTE_DIRECTORY)
+					{
+						// Do nothing, we don't support PS1 folder memcards...
+					}
+					// If file
+					else
+					{
+						memcard = std::make_unique<MemcardPS1File>(0, fd.FileName);
+					}
+
+					break;
 				}
 			}
 		}
 
-		// Skip any items which don't match a known memory card file extension
-		for (std::string extension : Memcard::MEMCARD_FILE_EXTENSIONS)
+		// Only add to the summaries list if we had a good match.
+		if (memcard)
 		{
-			if (fd.FileName.ends_with(extension))
-			{
-				AvailableMemcardSummary summary;
-
-				// Folder memcards: Check for a superblock file
-				if (fd.Attributes & FILESYSTEM_FILE_ATTRIBUTE_DIRECTORY)
-				{
-					std::string folderMemcardPath = Path::Combine(EmuFolders::MemoryCards.c_str(), fd.FileName);
-					std::string superblockPath = Path::Combine(folderMemcardPath, SUPERBLOCK_FILENAME);
-
-					if (FileSystem::FileExists(superblockPath.c_str()))
-					{
-						summary.name = fd.FileName;
-						summary.path = folderMemcardPath;
-						summary.modified_time = fd.ModificationTime;
-						summary.type = Memcard::Type::PS2;
-						summary.hostType = Memcard::HostType::FOLDER;
-						summary.size = hostFolder->GetSize();
-
-					}
-
-					FolderMemoryCard sourceFolderMemoryCard;
-					Pcsx2Config::McdOptions config;
-					config.Enabled = true;
-					config.Type = MemoryCardType::Folder;
-					sourceFolderMemoryCard.Open(fd.FileName, config, (8 * 1024 * 1024) / FolderMemoryCard::ClusterSize, false, "");
-
-					
-					sourceFolderMemoryCard.Close(false);
-				}
-				else
-				{
-					if (fd.Size < MCD_SIZE)
-						continue;
-
-					const bool formatted = FileMcd_IsMemoryCardFormatted(fd.FileName);
-					summaries.push_back({std::move(baseName), std::move(fd.FileName), fd.ModificationTime,
-						MemoryCardType::File, GetMemoryCardFileTypeFromSize(fd.Size),
-						static_cast<u32>(fd.Size), formatted});
-				}
-				break;
-			}
+			summaries.push_back({
+				std::move(baseName), 
+				std::move(fd.FileName), 
+				fd.ModificationTime,
+				Memcard::Type::PS2,
+				Memcard::HostType::FOLDER, 
+				memcard->GetSize(), 
+				memcard->IsFormatted()
+			});
+			continue;
 		}
 	}
 

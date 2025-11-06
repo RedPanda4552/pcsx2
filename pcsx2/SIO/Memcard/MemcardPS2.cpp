@@ -46,7 +46,7 @@ void MemcardPS2::SetPage()
 	}
 
 	this->currentPage = pageLSB | (page2nd << 8) | (page3rd << 16) | (pageMSB << 24);
-	this->currentAddr = (MemcardPS2::PAGE_LENGTH + MemcardPS2::ECC_LENGTH) * this->currentPage;
+	this->currentAddr = (PAGE_LENGTH + ECC_LENGTH) * this->currentPage;
 	
 	g_Sio2FifoOut.push_back(0x2B);
 	g_Sio2FifoOut.push_back(this->terminator);
@@ -54,23 +54,23 @@ void MemcardPS2::SetPage()
 
 void MemcardPS2::GetSpecs()
 {
-	const u32 sizeInPages = static_cast<u32>(this->clusterCount) * MemcardPS2::PAGES_PER_CLUSTER;
+	const u32 sizeInPages = static_cast<u32>(this->clusterCount) * PAGES_PER_CLUSTER;
 	u8 checksum = 0x00;
 	g_Sio2FifoOut.push_back(0x2B);
 	
-	constexpr u8 pageSizeLSB = (MemcardPS2::PAGE_LENGTH & 0xFF);
+	constexpr u8 pageSizeLSB = (PAGE_LENGTH & 0xFF);
 	checksum ^= pageSizeLSB;
 	g_Sio2FifoOut.push_back(pageSizeLSB);
 
-	constexpr u8 pageSizeMSB = ((MemcardPS2::PAGE_LENGTH >> 8) & 0xFF);
+	constexpr u8 pageSizeMSB = ((PAGE_LENGTH >> 8) & 0xFF);
 	checksum ^= pageSizeMSB;
 	g_Sio2FifoOut.push_back(pageSizeMSB);
 
-	constexpr u8 eraseBlockSizeLSB = (MemcardPS2::PAGES_PER_ERASE_BLOCK & 0xFF);
+	constexpr u8 eraseBlockSizeLSB = (PAGES_PER_ERASE_BLOCK & 0xFF);
 	checksum ^= eraseBlockSizeLSB;
 	g_Sio2FifoOut.push_back(eraseBlockSizeLSB);
 
-	constexpr u8 eraseBlockSizeMSB = ((MemcardPS2::PAGES_PER_ERASE_BLOCK >> 8) & 0xFF);
+	constexpr u8 eraseBlockSizeMSB = ((PAGES_PER_ERASE_BLOCK >> 8) & 0xFF);
 	checksum ^= eraseBlockSizeMSB;
 	g_Sio2FifoOut.push_back(eraseBlockSizeMSB);
 
@@ -120,7 +120,7 @@ void MemcardPS2::WriteData()
 	const u8 writeLength = g_Sio2FifoIn.front();
 	g_Sio2FifoIn.pop_front();
 
-	if (this->currentAddr + writeLength >= this->lastClearedEraseBlockAddr + MemcardPS2::ERASE_BLOCK_LENGTH)
+	if (this->currentAddr + writeLength >= this->lastClearedEraseBlockAddr + ERASE_BLOCK_LENGTH)
 	{
 		Console.Warning(
 			"%s Write outside of cleared erase block! Write addr = 0x%08X, len = %d; erase block addr = 0x%08X, len = %d", 
@@ -128,7 +128,7 @@ void MemcardPS2::WriteData()
 			this->currentAddr, 
 			writeLength, 
 			this->lastClearedEraseBlockAddr, 
-			MemcardPS2::ERASE_BLOCK_LENGTH
+			ERASE_BLOCK_LENGTH
 		);
 	}
 
@@ -183,13 +183,13 @@ void MemcardPS2::EraseBlock()
 	MemcardBusy::SetBusy();
 	this->SendWriteMessageToHost();
 
-	if (this->currentAddr % MemcardPS2::ERASE_BLOCK_LENGTH != 0)
+	if (this->currentAddr % ERASE_BLOCK_LENGTH != 0)
 	{
 		Console.Warning("%s Misaligned address is not the front of an erase block! (%08X)", __FUNCTION__, this->currentAddr);
 	}
 
 	std::vector<u8> clearData;
-	clearData.resize(MemcardPS2::ERASE_BLOCK_LENGTH);
+	clearData.resize(ERASE_BLOCK_LENGTH);
 	memset(clearData.data(), 0xFF, clearData.size());
 	this->Write(this->currentAddr, clearData);
 	this->lastClearedEraseBlockAddr = this->currentAddr;
@@ -302,7 +302,7 @@ void MemcardPS2::AuthF7()
 MemcardPS2::MemcardPS2(u32 unifiedSlot, std::string path)
 	: MemcardBase(unifiedSlot, path)
 {
-	this->clusterCount = static_cast<ClusterCount>(this->GetSize() / (MemcardPS2::PAGE_LENGTH + ECC_LENGTH) / MemcardPS2::PAGES_PER_CLUSTER);
+	this->clusterCount = static_cast<ClusterCount>(this->GetSize() / (PAGE_LENGTH + ECC_LENGTH) / PAGES_PER_CLUSTER);
 }
 
 MemcardPS2::~MemcardPS2() = default;
@@ -314,8 +314,8 @@ Memcard::Type MemcardPS2::GetType()
 
 bool MemcardPS2::ValidateCapacity()
 {
-	const u32 standardFileSize = (static_cast<u32>(ClusterCount::x8MB) * MemcardPS2::PAGES_PER_CLUSTER) * (MemcardPS2::PAGE_LENGTH + ECC_LENGTH);
-	const u32 maxFileSize = (static_cast<u32>(ClusterCount::x2048MB) * MemcardPS2::PAGES_PER_CLUSTER) * (MemcardPS2::PAGE_LENGTH + ECC_LENGTH);
+	const u32 standardFileSize = (static_cast<u32>(ClusterCount::x8MB) * PAGES_PER_CLUSTER) * (PAGE_LENGTH + ECC_LENGTH);
+	const u32 maxFileSize = (static_cast<u32>(ClusterCount::x2048MB) * PAGES_PER_CLUSTER) * (PAGE_LENGTH + ECC_LENGTH);
 	
 	const s64 fileSize = this->GetSize();
 
@@ -350,7 +350,11 @@ bool MemcardPS2::ValidateCapacity()
 
 bool MemcardPS2::IsFormatted()
 {
-	// TODO
+	std::vector<u8> buf;
+	buf.reserve(FORMAT_STRING_LENGTH);
+	this->Read(0, buf);
+
+	return strncmp(reinterpret_cast<const char*>(buf.data()), FORMAT_STRING, FORMAT_STRING_LENGTH) == 0;
 }
 
 void MemcardPS2::ExecuteCommand()
