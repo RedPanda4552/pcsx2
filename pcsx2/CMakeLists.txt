@@ -114,12 +114,12 @@ set(pcsx2Sources
 	SIO/Multitap/MultitapProtocol.cpp
 	SIO/Memcard/Memcard.cpp
 	SIO/Memcard/MemcardBase.cpp
-	SIO/Memcard/MemcardHostBase.cpp
-	SIO/Memcard/MemcardHostFile.cpp
-	SIO/Memcard/MemcardHostFolder.cpp
 	SIO/Memcard/MemcardNotConnected.cpp
 	SIO/Memcard/MemcardPS1.cpp
+	SIO/Memcard/MemcardPS1File.cpp
 	SIO/Memcard/MemcardPS2.cpp
+	SIO/Memcard/MemcardPS2File.cpp
+	SIO/Memcard/MemcardPS2Folder.cpp
 	SIO/Memcard/MemoryCardFile.cpp
 	SIO/Memcard/MemoryCardFolder.cpp
 	SIO/Memcard/MemoryCardProtocol.cpp
@@ -198,12 +198,12 @@ set(pcsx2Headers
 	SIO/Multitap/MultitapProtocol.h
 	SIO/Memcard/Memcard.h
 	SIO/Memcard/MemcardBase.h
-	SIO/Memcard/MemcardHostBase.h
-	SIO/Memcard/MemcardHostFile.h
-	SIO/Memcard/MemcardHostFolder.h
 	SIO/Memcard/MemcardNotConnected.h
 	SIO/Memcard/MemcardPS1.h
+	SIO/Memcard/MemcardPS1File.h
 	SIO/Memcard/MemcardPS2.h
+	SIO/Memcard/MemcardPS2File.h
+	SIO/Memcard/MemcardPS2Folder.h
 	SIO/Memcard/MemoryCardFile.h
 	SIO/Memcard/MemoryCardFolder.h
 	SIO/Memcard/MemoryCardProtocol.h
