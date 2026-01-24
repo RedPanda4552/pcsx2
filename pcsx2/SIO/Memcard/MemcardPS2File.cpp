@@ -12,7 +12,7 @@
 
 bool MemcardPS2File::Seek(u32 addr)
 {
-	const int seekResult = FileSystem::FSeek64(this->filePtr.get(), addr, SEEK_SET);
+	const int seekResult = FileSystem::FSeek64(this->filePtr, addr, SEEK_SET);
 
 	if (seekResult != 0)
 	{
@@ -26,14 +26,17 @@ bool MemcardPS2File::Seek(u32 addr)
 MemcardPS2File::MemcardPS2File(u32 unifiedSlot, std::string path)
     : MemcardPS2(unifiedSlot, path)
 {
-    this->filePtr = FileSystem::OpenManagedCFile(path.c_str(), "wb");
+    this->filePtr = FileSystem::OpenSharedCFile(path.c_str(), "r+b", FileSystem::FileShareMode::DenyWrite);
+	this->absoluteSize = FileSystem::FSize64(this->filePtr);
+	this->clusterCount = static_cast<ClusterCount>(this->absoluteSize / (PAGE_LENGTH + ECC_LENGTH) / PAGES_PER_CLUSTER);
+	this->eraseBlockCount = static_cast<EraseBlockCount>(this->absoluteSize / ERASE_BLOCK_LENGTH);
 }
 
 MemcardPS2File::~MemcardPS2File() = default;
 
 s64 MemcardPS2File::GetSize()
 {
-	return static_cast<u32>(this->eraseBlockCount) * ERASE_BLOCK_LENGTH;
+	return this->absoluteSize;
 }
 
 CreateResult MemcardPS2File::Create()
@@ -49,7 +52,7 @@ CreateResult MemcardPS2File::Create()
 
     for (u32 i = 0; i < static_cast<u32>(eraseBlockCount); i++)
     {
-        if (std::fwrite(buf, sizeof(buf), 1, this->filePtr.get()) != 1)
+        if (std::fwrite(buf, sizeof(buf), 1, this->filePtr) != 1)
         {
             return CreateResult::FAILED_TO_WRITE_BLOCK;
         }
@@ -60,7 +63,7 @@ CreateResult MemcardPS2File::Create()
 
 bool MemcardPS2File::IsOpened()
 {
-	return this->filePtr.get();
+	return this->filePtr;
 }
 
 void MemcardPS2File::Write(u32 addr, std::vector<u8>& src)
@@ -71,7 +74,7 @@ void MemcardPS2File::Write(u32 addr, std::vector<u8>& src)
 		return;
 	}
 
-	const size_t writeResult = std::fwrite(src.data(), src.size(), 1, this->filePtr.get());
+	const size_t writeResult = std::fwrite(src.data(), src.size(), 1, this->filePtr);
 
 	if (writeResult != 1)
 	{
@@ -89,7 +92,7 @@ void MemcardPS2File::Read(u32 addr, std::vector<u8>& dest)
 		return;
 	}
 
-	const size_t readResult = std::fread(dest.data(), dest.size(), 1, this->filePtr.get());
+	const size_t readResult = std::fread(dest.data(), dest.size(), 1, this->filePtr);
 
 	if (readResult != 1)
 	{

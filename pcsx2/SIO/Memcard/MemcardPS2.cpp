@@ -120,7 +120,7 @@ void MemcardPS2::WriteData()
 	const u8 writeLength = g_Sio2FifoIn.front();
 	g_Sio2FifoIn.pop_front();
 
-	if (this->currentAddr + writeLength >= this->lastClearedEraseBlockAddr + ERASE_BLOCK_LENGTH)
+	if (this->currentAddr + writeLength > this->lastClearedEraseBlockAddr + ERASE_BLOCK_LENGTH)
 	{
 		Console.Warning(
 			"%s Write outside of cleared erase block! Write addr = 0x%08X, len = %d; erase block addr = 0x%08X, len = %d", 
@@ -152,6 +152,7 @@ void MemcardPS2::WriteData()
 
 void MemcardPS2::ReadData()
 {
+	this->SendReadMessageToHost();
 	const u8 readLength = g_Sio2FifoIn.front();
 	g_Sio2FifoIn.pop_front();
 	g_Sio2FifoOut.push_back(0x00);
@@ -276,7 +277,7 @@ void MemcardPS2::AuthXor()
 			break;
 		}
 		default:
-			Console.Warning("%s(queue) Unexpected modeByte (%02X), please report to the PCSX2 team", __FUNCTION__, modeByte);
+			Console.Warning("%s Unexpected modeByte (%02X), please report to the PCSX2 team", __FUNCTION__, modeByte);
 			break;
 	}
 }
@@ -302,7 +303,7 @@ void MemcardPS2::AuthF7()
 MemcardPS2::MemcardPS2(u32 unifiedSlot, std::string path)
 	: MemcardBase(unifiedSlot, path)
 {
-	this->clusterCount = static_cast<ClusterCount>(this->GetSize() / (PAGE_LENGTH + ECC_LENGTH) / PAGES_PER_CLUSTER);
+	
 }
 
 MemcardPS2::~MemcardPS2() = default;

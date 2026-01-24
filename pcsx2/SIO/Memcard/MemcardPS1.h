@@ -3,6 +3,9 @@
 
 #include "SIO/Memcard/MemcardBase.h"
 
+constexpr const char* PS1_FORMAT_STRING = "MC";
+constexpr u8 PS1_FORMAT_STRING_LENGTH = 2;
+
 // Frame size in bytes
 constexpr u32 FRAME_SIZE = 128;
 // Block size in frames
