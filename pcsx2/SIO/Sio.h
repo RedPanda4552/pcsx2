@@ -109,32 +109,6 @@ extern bool sioPadIsMultitapSlot(u32 index);
 extern bool sioPortAndSlotIsMultitap(u32 port, u32 slot);
 extern void sioSetGameSerial(const std::string& serial);
 
-namespace AutoEject
-{
-	extern void CountDownTicks();
-	extern void Set(size_t port, size_t slot);
-	extern void Clear(size_t port, size_t slot);
-	extern void SetAll();
-	extern void ClearAll();
-} // namespace AutoEject
-
-// ~2 hours of memory card inactivity.
-constexpr u32 NUM_FRAMES_BEFORE_SAVESTATE_DEPENDENCY_WARNING = 60 * 60 * 60 * 2;
-
-// Set to the current frame count when there is memory card activity.
-// Used to detect the last frame when memory card activity was detected,
-// and if it exceeds a certain threshold, warns on savestate save/load.
-extern uint32_t sioLastFrameMcdBusy;
-
-namespace MemcardBusy
-{
-	extern void Decrement();
-	extern void SetBusy();
-	extern bool IsBusy();
-	extern void ClearBusy();
-	extern void CheckSaveStateDependency();
-}
-
 namespace SIO
 {
 	// Helper function to fetch a "unified slot" index; PCSX2 frequently references ports and slots

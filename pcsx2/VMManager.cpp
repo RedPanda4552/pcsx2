@@ -893,10 +893,8 @@ void VMManager::Internal::UpdateEmuFolders()
 				memcardFilters = game->memcardFiltersAsString();
 			}
 
-			AutoEject::SetAll();
-
 			if (!GSDumpReplayer::IsReplayingDump())
-				FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
+				Memcard::Initialize();
 		}
 
 		if (EmuFolders::Textures != old_textures_directory)
@@ -1727,7 +1725,6 @@ void VMManager::Shutdown(bool save_resume_state)
 	Memcard::Shutdown();
 	g_Sio2.Shutdown();
 	g_Sio0.Shutdown();
-	MemcardBusy::ClearBusy();
 	DEV9close();
 	DoCDVDclose();
 	FWclose();
@@ -1934,7 +1931,6 @@ bool VMManager::DoLoadState(const char* filename, Error* error)
 		MTGS::PresentCurrentFrame();
 	}
 
-	MemcardBusy::CheckSaveStateDependency();
 	return true;
 }
 
@@ -2077,7 +2073,7 @@ bool VMManager::LoadState(const char* filename, Error* error)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Error::SetString(error,
 			TRANSLATE_STR("VMManager", "The memory card is busy, so the state load operation has been cancelled to prevent data loss."));
@@ -2110,7 +2106,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup, Error* error)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Error::SetString(error,
 			TRANSLATE_STR("VMManager",
@@ -2140,7 +2136,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup, Error* error)
 void VMManager::SaveState(
 	const char* filename, bool zip_on_thread, bool backup_old_state, std::function<void(const std::string&)> error_callback)
 {
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		error_callback(TRANSLATE_STR("VMManager",
 			"The memory card is busy, so the state save operation has been cancelled to prevent data loss."));
@@ -2159,7 +2155,7 @@ void VMManager::SaveStateToSlot(s32 slot, bool zip_on_thread, std::function<void
 		return;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		error_callback(TRANSLATE_STR("VMManager",
 			"The memory card is busy, so the state save operation has been cancelled to prevent data loss."));
