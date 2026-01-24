@@ -16,9 +16,11 @@ private:
 	u32 unifiedSlot;
 
 protected:
+	size_t absoluteSize;
 	std::string path;
 	u32 autoEjectTicks;
 	std::chrono::time_point<std::chrono::system_clock> lastWriteTime;
+	std::chrono::time_point<std::chrono::system_clock> lastReadTime;
 
 public:
 	MemcardBase(u32 unifiedSlot, std::string path);
@@ -28,6 +30,7 @@ public:
 	u32 GetUnifiedSlot();
 	
 	void SendWriteMessageToHost();
+	void SendReadMessageToHost();
 	u32 GetAutoEjectTicks();
 	void SetAutoEject();
 

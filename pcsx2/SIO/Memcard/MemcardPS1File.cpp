@@ -23,13 +23,14 @@ MemcardPS1File::MemcardPS1File(u32 unifiedSlot, std::string path)
     : MemcardPS1(unifiedSlot, path)
 {
     this->filePtr = FileSystem::OpenManagedCFile(path.c_str(), "wb");
+	this->absoluteSize = FileSystem::FSize64(this->filePtr.get());
 }
 
 MemcardPS1File::~MemcardPS1File() = default;
 
 s64 MemcardPS1File::GetSize()
 {
-	return PS1_CARD_SIZE;
+	return this->absoluteSize;
 }
 
 CreateResult MemcardPS1File::Create()

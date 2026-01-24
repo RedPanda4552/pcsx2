@@ -8,7 +8,7 @@
 class MemcardPS2File : public MemcardPS2
 {
 private:
-    FileSystem::ManagedCFilePtr filePtr;
+    std::FILE* filePtr;
 
     bool Seek(u32 addr);
     
