@@ -112,7 +112,7 @@ void MemcardPS2::GetTerminator()
 
 void MemcardPS2::WriteData()
 {
-	MemcardBusy::SetBusy();
+	this->SetBusy();
 	this->SendWriteMessageToHost();
 
 	g_Sio2FifoOut.push_back(0x00);
@@ -181,7 +181,7 @@ void MemcardPS2::ReadWriteEnd()
 
 void MemcardPS2::EraseBlock()
 {
-	MemcardBusy::SetBusy();
+	this->SetBusy();
 	this->SendWriteMessageToHost();
 
 	if (this->currentAddr % ERASE_BLOCK_LENGTH != 0)

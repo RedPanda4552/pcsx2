@@ -849,10 +849,8 @@ void VMManager::Internal::UpdateEmuFolders()
 				memcardFilters = game->memcardFiltersAsString();
 			}
 
-			AutoEject::SetAll();
-
 			if (!GSDumpReplayer::IsReplayingDump())
-				FileMcd_Reopen(memcardFilters.empty() ? s_disc_serial : memcardFilters);
+				Memcard::Initialize();
 		}
 
 		if (EmuFolders::Textures != old_textures_directory)
@@ -1652,7 +1650,6 @@ void VMManager::Shutdown(bool save_resume_state)
 	Memcard::Shutdown();
 	g_Sio2.Shutdown();
 	g_Sio0.Shutdown();
-	MemcardBusy::ClearBusy();
 	DEV9close();
 	DoCDVDclose();
 	FWclose();
@@ -1842,7 +1839,6 @@ bool VMManager::DoLoadState(const char* filename)
 		MTGS::PresentCurrentFrame();
 	}
 
-	MemcardBusy::CheckSaveStateDependency();
 	return true;
 }
 
@@ -1891,7 +1887,6 @@ bool VMManager::DoSaveState(const char* filename, s32 slot_for_message, bool zip
 	}
 
 	Host::OnSaveStateSaved(filename);
-	MemcardBusy::CheckSaveStateDependency();
 	return true;
 }
 
@@ -1987,7 +1982,7 @@ bool VMManager::LoadState(const char* filename)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to load state (Memory card is busy)")),
@@ -2022,7 +2017,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup)
 		return false;
 	}
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to load {} from slot {} (Memory card is busy)"), backup ? TRANSLATE("VMManager", "backup state") : TRANSLATE("VMManager", "state"), slot),
@@ -2037,7 +2032,7 @@ bool VMManager::LoadStateFromSlot(s32 slot, bool backup)
 
 bool VMManager::SaveState(const char* filename, bool zip_on_thread, bool backup_old_state)
 {
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to save state (Memory card is busy)")),
@@ -2054,7 +2049,7 @@ bool VMManager::SaveStateToSlot(s32 slot, bool zip_on_thread)
 	if (filename.empty())
 		return false;
 
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("LoadStateFromSlot", ICON_FA_TRIANGLE_EXCLAMATION,
 			fmt::format(TRANSLATE_FS("VMManager", "Failed to save state to slot {} (Memory card is busy)"), slot),

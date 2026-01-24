@@ -90,4 +90,7 @@ namespace Memcard
 
 	Memcard::Type GetMemcardType(std::string fullPath);
 	std::vector<Memcard::AvailableMemcardSummary> GetAvailableMemcards(bool includeInUse);
+	bool IsBusy();
+
+	void Freeze();
 } // namespace Memcard

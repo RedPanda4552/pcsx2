@@ -17,6 +17,7 @@
 #include "common/Path.h"
 #include "common/FileSystem.h"
 #include "Host.h"
+#include "IconsPromptFont.h"
 
 #include <memory>
 
@@ -338,4 +339,33 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 	}
 
 	return summaries;
+}
+
+bool Memcard::IsBusy()
+{
+	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
+	{
+		MemcardBase* memcard = s_memcards.at(i).get();
+
+		if (memcard->IsBusy())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void Memcard::Freeze()
+{
+	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
+	{
+		MemcardBase* memcard = s_memcards.at(i).get();
+
+		if (memcard->IsPastSaveStateThreshold())
+		{
+			Host::AddIconOSDMessage("MemcardSaveStateThreshold", ICON_PF_MEMORY_CARD,
+			TRANSLATE_SV("MemoryCard", "The virtual console hasn't saved to your memory card in a long time.\nSavestates should not be used in place of in-game saves."), Host::OSD_INFO_DURATION);
+		}
+	}
 }
