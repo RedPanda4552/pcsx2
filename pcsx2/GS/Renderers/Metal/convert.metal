@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GSMTLShaderCommon.h"
@@ -192,7 +192,7 @@ fragment float4 ps_downsample_copy(ConvertShaderData data [[stage_in]],
 	for (uint yoff = 0; yoff < uniform.downsample_factor; yoff++)
 	{
 		for (uint xoff = 0; xoff < uniform.downsample_factor; xoff++)
-			result += texture.read(coord + uint2(xoff, yoff), 0);
+			result += texture.read(coord + uint2(xoff * uniform.step_multiplier, yoff * uniform.step_multiplier), 0);
 	}
 	result /= uniform.weight;
 	return result;

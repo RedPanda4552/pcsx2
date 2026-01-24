@@ -272,7 +272,7 @@ if (NOT APPLE)
     )
 endif()
 
-file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/Translations/*.ts)
+file(GLOB TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/Translations/pcsx2-qt_*-*.ts)
 
 target_precompile_headers(pcsx2-qt PRIVATE PrecompiledHeader.h)
 set_source_files_properties(PrecompiledHeader.cpp PROPERTIES HEADER_FILE_ONLY TRUE)
@@ -289,10 +289,13 @@ target_link_libraries(pcsx2-qt PRIVATE
 	PCSX2
 	Qt6::Core
 	Qt6::Gui
-	Qt6::GuiPrivate
 	Qt6::Widgets
 	KDAB::kddockwidgets
 )
+
+if(NOT WIN32 AND NOT APPLE)
+	target_link_libraries(pcsx2-qt PRIVATE Qt6::GuiPrivate)
+endif()
 
 # Our Qt builds may have exceptions on, so force them off.
 target_compile_definitions(pcsx2-qt PRIVATE QT_NO_EXCEPTIONS)

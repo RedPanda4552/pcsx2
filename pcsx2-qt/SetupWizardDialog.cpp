@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "pcsx2/SIO/Pad/Pad.h"
@@ -10,6 +10,7 @@
 #include "Settings/InterfaceSettingsWidget.h"
 #include "SetupWizardDialog.h"
 
+#include <QtCore/QLocale>
 #include <QtWidgets/QMessageBox>
 
 SetupWizardDialog::SetupWizardDialog()
@@ -175,14 +176,20 @@ void SetupWizardDialog::setupLanguagePage()
 {
 	SettingWidgetBinder::BindWidgetToEnumSetting(nullptr, m_ui.theme, "UI", "Theme",
 		InterfaceSettingsWidget::THEME_NAMES, InterfaceSettingsWidget::THEME_VALUES, QtHost::GetDefaultThemeName(), "InterfaceSettingsWidget");
-	connect(m_ui.theme, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SetupWizardDialog::themeChanged);
+	connect(m_ui.theme, &QComboBox::currentIndexChanged, this, &SetupWizardDialog::themeChanged);
 
 	for (const std::pair<QString, QString>& it : QtHost::GetAvailableLanguageList())
-		m_ui.language->addItem(it.first, it.second);
+	{
+		QIcon flag_icon = QtUtils::GetFlagIconForLanguage(it.second);
+		if (!flag_icon.isNull())
+			m_ui.language->addItem(flag_icon, it.first, it.second);
+		else
+			m_ui.language->addItem(it.first, it.second);
+	}
 	SettingWidgetBinder::BindWidgetToStringSetting(
 		nullptr, m_ui.language, "UI", "Language", QtHost::GetDefaultLanguage());
 	connect(
-		m_ui.language, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SetupWizardDialog::languageChanged);
+		m_ui.language, &QComboBox::currentIndexChanged, this, &SetupWizardDialog::languageChanged);
 
 	SettingWidgetBinder::BindWidgetToBoolSetting(
 		nullptr, m_ui.autoUpdateEnabled, "AutoUpdater", "CheckAtStartup", true);
@@ -254,8 +261,10 @@ void SetupWizardDialog::onDirectoryListContextMenuRequested(const QPoint& point)
 	const int row = selection[0].row();
 
 	QMenu menu;
+	//: Part of the right-click menu for game directory entries
 	menu.addAction(tr("Remove"), [this]() { onRemoveSearchDirectoryButtonClicked(); });
 	menu.addSeparator();
+	//: Part of the right-click menu for game directory entries
 	menu.addAction(tr("Open Directory..."),
 		[this, row]() { QtUtils::OpenURL(this, QUrl::fromLocalFile(m_ui.searchDirectoryList->item(row, 0)->text())); });
 	menu.exec(m_ui.searchDirectoryList->mapToGlobal(point));

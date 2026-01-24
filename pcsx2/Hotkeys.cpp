@@ -1,10 +1,10 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "Achievements.h"
 #include "GS.h"
 #include "Host.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 #include "ImGui/FullscreenUI.h"
 #include "ImGui/ImGuiOverlays.h"
 #include "Input/InputManager.h"
@@ -14,6 +14,7 @@
 #include "SIO/Memcard/MemoryCardFile.h"
 
 #include "common/Assertions.h"
+#include "common/Error.h"
 #include "common/FileSystem.h"
 #include "common/Path.h"
 #include "common/Timer.h"
@@ -103,13 +104,17 @@ static void HotkeyLoadStateSlot(s32 slot)
 			return;
 		}
 
-		VMManager::LoadStateFromSlot(slot);
+		Error error;
+		if (!VMManager::LoadStateFromSlot(slot, false, &error))
+			FullscreenUI::ReportStateLoadError(error.GetDescription(), slot, false);
 	});
 }
 
 static void HotkeySaveStateSlot(s32 slot)
 {
-	VMManager::SaveStateToSlot(slot);
+	VMManager::SaveStateToSlot(slot, true, [slot](const std::string& error) {
+		FullscreenUI::ReportStateSaveError(error, slot);
+	});
 }
 
 static bool CanPause()

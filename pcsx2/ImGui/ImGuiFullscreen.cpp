@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "fmt/format.h"
@@ -22,7 +22,7 @@
 #include "common/Threading.h"
 #include "common/Timer.h"
 
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 #include "imgui_internal.h"
 #include "imgui_stdlib.h"
 
@@ -708,16 +708,16 @@ void ImGuiFullscreen::EndLayout()
 	const float notification_margin = LayoutScale(10.0f);
 	const float spacing = LayoutScale(10.0f);
 	const float notification_vertical_pos = GetNotificationVerticalPosition();
-	
+
 	// Get the horizonal position based on alignment
 	float horizontal_pos;
 	if (s_notification_horizontal_position <= 0.0f)
 		horizontal_pos = notification_margin; // Left
-	else if (s_notification_horizontal_position >= 1.0f) 
+	else if (s_notification_horizontal_position >= 1.0f)
 		horizontal_pos = ImGui::GetIO().DisplaySize.x - notification_margin; // Right
 	else
 		horizontal_pos = ImGui::GetIO().DisplaySize.x * s_notification_horizontal_position; // Center
-	
+
 	ImVec2 position(horizontal_pos, notification_vertical_pos * ImGui::GetIO().DisplaySize.y +
 											 ((notification_vertical_pos >= 0.5f) ? -notification_margin : notification_margin));
 	DrawProgressDialogs(position, spacing);
@@ -2390,12 +2390,14 @@ void ImGuiFullscreen::DrawChoiceDialog()
 		return;
 
 	ImGui::PushFont(g_large_font.first, g_large_font.second);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, LayoutScale(20.0f, 20.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, LayoutScale(10.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, LayoutScale(LAYOUT_MENU_BUTTON_X_PADDING, LAYOUT_MENU_BUTTON_Y_PADDING));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 	ImGui::PushStyleColor(ImGuiCol_Text, UIPrimaryTextColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBg, UIPrimaryDarkColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBgActive, UIPrimaryColor);
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, UIPopupBackgroundColor);
 
 	const float width = LayoutScale(600.0f);
 	const float title_height = g_large_font.second + ImGui::GetStyle().FramePadding.y * 2.0f + ImGui::GetStyle().WindowPadding.y * 2.0f;
@@ -2464,8 +2466,8 @@ void ImGuiFullscreen::DrawChoiceDialog()
 		is_open = false;
 	}
 
-	ImGui::PopStyleColor(3);
-	ImGui::PopStyleVar(3);
+	ImGui::PopStyleColor(4);
+	ImGui::PopStyleVar(4);
 	ImGui::PopFont();
 
 	if (choice >= 0)
@@ -2517,17 +2519,18 @@ void ImGuiFullscreen::DrawInputDialog()
 	ImGui::OpenPopup(s_input_dialog_title.c_str());
 
 	ImGui::PushFont(g_large_font.first, g_large_font.second);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, LayoutScale(20.0f, 20.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, LayoutScale(10.0f));
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, LayoutScale(LAYOUT_MENU_BUTTON_X_PADDING, LAYOUT_MENU_BUTTON_Y_PADDING));
 	ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
 	ImGui::PushStyleColor(ImGuiCol_Text, UIPrimaryTextColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBg, UIPrimaryDarkColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBgActive, UIPrimaryColor);
-	ImGui::PushStyleColor(ImGuiCol_PopupBg, UIBackgroundColor);
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, UIPopupBackgroundColor);
 
 	bool is_open = true;
 	if (ImGui::BeginPopupModal(s_input_dialog_title.c_str(), &is_open,
-			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove))
+			ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar))
 	{
 		ResetFocusHere();
 		ImGui::TextWrapped("%s", s_input_dialog_message.c_str());
@@ -2573,13 +2576,25 @@ void ImGuiFullscreen::DrawInputDialog()
 		ImGuiInputTextFlags flags = ImGuiInputTextFlags_None;
 		if (s_input_dialog_filter_type != InputFilterType::None)
 			flags |= ImGuiInputTextFlags_CallbackCharFilter;
-		
+
 		if (s_focus_reset_queued != FocusResetType::None)
 			ImGui::SetKeyboardFocusHere();
-		
-		ImGui::InputText("##input", &s_input_dialog_text, flags, 
+
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, LayoutScale(8.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, LayoutScale(12.0f, 10.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, LayoutScale(1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, ImVec4(0.25f, 0.25f, 0.25f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_FrameBgActive, ImVec4(0.3f, 0.3f, 0.3f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
+
+		ImGui::InputText("##input", &s_input_dialog_text, flags,
 			(s_input_dialog_filter_type != InputFilterType::None) ? input_callback : nullptr,
 			(s_input_dialog_filter_type != InputFilterType::None) ? static_cast<void*>(&s_input_dialog_filter_type) : nullptr);
+
+		ImGui::PopStyleColor(5);
+		ImGui::PopStyleVar(3);
 
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + LayoutScale(10.0f));
 
@@ -2612,7 +2627,7 @@ void ImGuiFullscreen::DrawInputDialog()
 		GetInputDialogHelpText(s_fullscreen_footer_text);
 
 	ImGui::PopStyleColor(4);
-	ImGui::PopStyleVar(3);
+	ImGui::PopStyleVar(4);
 	ImGui::PopFont();
 }
 
@@ -2704,7 +2719,8 @@ void ImGuiFullscreen::DrawMessageDialog()
 	const char* win_id = s_message_dialog_title.empty() ? "##messagedialog" : s_message_dialog_title.c_str();
 
 	ImGui::SetNextWindowSize(LayoutScale(700.0f, 0.0f));
-	ImGui::SetNextWindowPos(ImGui::GetIO().DisplaySize * 0.5f, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowPos((ImGui::GetIO().DisplaySize - LayoutScale(0.0f, LAYOUT_FOOTER_HEIGHT)) * 0.5f,
+		ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 	ImGui::OpenPopup(win_id);
 
 	ImGui::PushFont(g_large_font.first, g_large_font.second);
@@ -2715,9 +2731,10 @@ void ImGuiFullscreen::DrawMessageDialog()
 	ImGui::PushStyleColor(ImGuiCol_Text, UIPrimaryTextColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBg, UIPrimaryDarkColor);
 	ImGui::PushStyleColor(ImGuiCol_TitleBgActive, UIPrimaryColor);
+	ImGui::PushStyleColor(ImGuiCol_PopupBg, UIPopupBackgroundColor);
 
 	bool is_open = true;
-	const u32 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+	const u32 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar |
 					  (s_message_dialog_title.empty() ? ImGuiWindowFlags_NoTitleBar : 0);
 	std::optional<s32> result;
 
@@ -2745,7 +2762,7 @@ void ImGuiFullscreen::DrawMessageDialog()
 		ImGui::EndPopup();
 	}
 
-	ImGui::PopStyleColor(3);
+	ImGui::PopStyleColor(4);
 	ImGui::PopStyleVar(4);
 	ImGui::PopFont();
 
@@ -2868,7 +2885,8 @@ void ImGuiFullscreen::DrawProgressDialogs(ImVec2& position, float spacing)
 	{
 		const std::string popup_id = fmt::format("##progress_dialog_{}", data.id);
 		ImGui::SetNextWindowSize(LayoutScale(600.0f, 0.0f));
-		ImGui::SetNextWindowPos(ImGui::GetIO().DisplaySize * 0.5f, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowPos((ImGui::GetIO().DisplaySize - LayoutScale(0.0f, LAYOUT_FOOTER_HEIGHT)) * 0.5f,
+			ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		ImGui::OpenPopup(popup_id.c_str());
 
 		ImGui::PushFont(g_large_font.first, g_large_font.second);
@@ -2883,7 +2901,7 @@ void ImGuiFullscreen::DrawProgressDialogs(ImVec2& position, float spacing)
 		ImGui::PushStyleColor(ImGuiCol_PlotHistogram, UISecondaryColor);
 
 		bool is_open = true;
-		const u32 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar;
+		const u32 flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar;
 
 		if (ImGui::BeginPopupModal(popup_id.c_str(), &is_open, flags))
 		{
@@ -3054,7 +3072,7 @@ void ImGuiFullscreen::DrawNotifications(ImVec2& position, float spacing)
 			final_x = position.x - box_width;
 		else if (s_notification_horizontal_position > 0.0f && s_notification_horizontal_position < 1.0f)
 			final_x = position.x - (box_width * 0.5f);
-		
+
 		const ImVec2 box_min(final_x, actual_y);
 		const ImVec2 box_max(box_min.x + box_width, box_min.y + box_height);
 		const u32 background_color = (toast_background_color & ~IM_COL32_A_MASK) | (opacity << IM_COL32_A_SHIFT);
@@ -3207,14 +3225,14 @@ void ImGuiFullscreen::SetTheme(std::string_view theme)
 	}
 	else if (theme == "AMOLED")
 	{
-		UIBackgroundColor = HEX_TO_IMVEC4(0x000000, 0xff);
+		UIBackgroundColor = HEX_TO_IMVEC4(0x0A0A0A, 0xff);
 		UIBackgroundTextColor = HEX_TO_IMVEC4(0xffffff, 0xff);
 		UIBackgroundLineColor = HEX_TO_IMVEC4(0xf0f0f0, 0xff);
 		UIBackgroundHighlightColor = HEX_TO_IMVEC4(0x0c0c0c, 0xff);
 		UIPopupBackgroundColor = HEX_TO_IMVEC4(0x212121, 0xf2);
 		UIPrimaryColor = HEX_TO_IMVEC4(0x0a0a0a, 0xff);
 		UIPrimaryLightColor = HEX_TO_IMVEC4(0xb5b5b5, 0xff);
-		UIPrimaryDarkColor = HEX_TO_IMVEC4(0x000000, 0xff);
+		UIPrimaryDarkColor = HEX_TO_IMVEC4(0x0A0A0A, 0xff);
 		UIPrimaryTextColor = HEX_TO_IMVEC4(0xffffff, 0xff);
 		UIDisabledColor = HEX_TO_IMVEC4(0x8d8d8d, 0xff);
 		UITextHighlightColor = HEX_TO_IMVEC4(0x676767, 0xff);

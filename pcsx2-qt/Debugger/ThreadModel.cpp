@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "ThreadModel.h"
@@ -13,7 +13,7 @@ ThreadModel::ThreadModel(DebugInterface& cpu, QObject* parent)
 
 int ThreadModel::rowCount(const QModelIndex&) const
 {
-	return m_cpu.GetThreadList().size();
+	return static_cast<int>(m_threads.size());
 }
 
 int ThreadModel::columnCount(const QModelIndex&) const

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 //////////////////////////////////////////////////////////////////////
@@ -288,6 +288,7 @@ void main()
 #define PS_DITHER 0
 #define PS_DITHER_ADJUST 0
 #define PS_ZCLAMP 0
+#define PS_ZFLOOR 0
 #define PS_FEEDBACK_LOOP 0
 #define PS_TEX_IS_FB 0
 #endif
@@ -315,6 +316,7 @@ layout(std140, set = 0, binding = 1) uniform cb1
 	vec4 LODParams;
 	vec4 STRange;
 	ivec4 ChannelShuffle;
+	vec2 ChannelShuffleOffset;
 	vec2 TC_OffsetHack;
 	vec2 STScale;
 	mat4 DitherMatrix;
@@ -906,7 +908,7 @@ bool atst(vec4 C)
 vec4 fog(vec4 c, float f)
 {
 	#if PS_FOG
-		c.rgb = trunc(mix(FogColor, c.rgb, f));
+		c.rgb = trunc(mix(FogColor, c.rgb, (f * 255.0f) / 256.0f));
 	#endif
 
 	return c;
@@ -925,17 +927,17 @@ vec4 ps_color()
 #if !NEEDS_TEX
 	vec4 T = vec4(0.0f);
 #elif PS_CHANNEL_FETCH == 1
-	vec4 T = fetch_red(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_red(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 2
-	vec4 T = fetch_green(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_green(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 3
-	vec4 T = fetch_blue(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_blue(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 4
-	vec4 T = fetch_alpha(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_alpha(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 5
-	vec4 T = fetch_rgb(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_rgb(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 6
-	vec4 T = fetch_gXbY(ivec2(gl_FragCoord.xy));
+	vec4 T = fetch_gXbY(ivec2(gl_FragCoord.xy + ChannelShuffleOffset));
 #elif PS_DEPTH_FMT > 0
 	vec4 T = sample_depth(st_int, ivec2(gl_FragCoord.xy));
 #else
@@ -1400,8 +1402,16 @@ void main()
 		#endif
 	#endif
 
+	#if PS_ZFLOOR
+		float depth_value = floor(gl_FragCoord.z * exp2(32.0f)) * exp2(-32.0f);;
+	#else
+		float depth_value = gl_FragCoord.z;
+	#endif
+	
 	#if PS_ZCLAMP
 		gl_FragDepth = min(gl_FragCoord.z, MaxDepthPS);
+	#elif PS_ZFLOOR
+		gl_FragDepth = depth_value;
 	#endif
 
 #endif // PS_DATE

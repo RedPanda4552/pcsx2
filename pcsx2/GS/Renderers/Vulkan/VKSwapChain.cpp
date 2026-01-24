@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GS/Renderers/Vulkan/GSDeviceVK.h"
@@ -366,7 +366,17 @@ bool VKSwapChain::CreateSwapChain()
 
 	// Store the old/current swap chain when recreating for resize
 	// Old swap chain is destroyed regardless of whether the create call succeeds
-	VkSwapchainKHR old_swap_chain = m_swap_chain;
+	VkSwapchainKHR old_swap_chain;
+	// RDNA4 experences a 2s delay in the following 2-3 vkAcquireNextImageKHR calls if we pass the old swapchain to the new one.
+	// Instead, pass null. This requires us to have freed the old image, which we already do with the swapchain maintenance extension.
+	if (GSDeviceVK::GetInstance()->IsDeviceAMD() && GSDeviceVK::GetInstance()->GetOptionalExtensions().vk_swapchain_maintenance1)
+	{
+		vkDestroySwapchainKHR(GSDeviceVK::GetInstance()->GetDevice(), m_swap_chain, nullptr);
+		old_swap_chain = VK_NULL_HANDLE;
+	}
+	else
+		old_swap_chain = m_swap_chain;
+
 	m_swap_chain = VK_NULL_HANDLE;
 
 	// Now we can actually create the swap chain
@@ -480,6 +490,18 @@ bool VKSwapChain::CreateSwapChain()
 			sema.available_semaphore = VK_NULL_HANDLE;
 			return false;
 		}
+
+		res = vkCreateSemaphore(
+			GSDeviceVK::GetInstance()->GetDevice(), &semaphore_info, nullptr, &sema.present_ready_semaphore);
+		if (res != VK_SUCCESS)
+		{
+			LOG_VULKAN_ERROR(res, "vkCreateSemaphore failed: ");
+			vkDestroySemaphore(GSDeviceVK::GetInstance()->GetDevice(), sema.rendering_finished_semaphore, nullptr);
+			vkDestroySemaphore(GSDeviceVK::GetInstance()->GetDevice(), sema.available_semaphore, nullptr);
+			sema.rendering_finished_semaphore = VK_NULL_HANDLE;
+			sema.available_semaphore = VK_NULL_HANDLE;
+			return false;
+		}
 	}
 
 	return true;
@@ -495,6 +517,8 @@ void VKSwapChain::DestroySwapChainImages()
 	m_images.clear();
 	for (auto& it : m_semaphores)
 	{
+		if (it.present_ready_semaphore != VK_NULL_HANDLE)
+			vkDestroySemaphore(GSDeviceVK::GetInstance()->GetDevice(), it.present_ready_semaphore, nullptr);
 		if (it.rendering_finished_semaphore != VK_NULL_HANDLE)
 			vkDestroySemaphore(GSDeviceVK::GetInstance()->GetDevice(), it.rendering_finished_semaphore, nullptr);
 		if (it.available_semaphore != VK_NULL_HANDLE)
@@ -549,17 +573,29 @@ void VKSwapChain::ReleaseCurrentImage()
 		return;
 
 	if ((m_image_acquire_result.value() == VK_SUCCESS || m_image_acquire_result.value() == VK_SUBOPTIMAL_KHR) &&
-		GSDeviceVK::GetInstance()->GetOptionalExtensions().vk_ext_swapchain_maintenance1)
+		GSDeviceVK::GetInstance()->GetOptionalExtensions().vk_swapchain_maintenance1)
 	{
 		GSDeviceVK::GetInstance()->WaitForGPUIdle();
 
-		const VkReleaseSwapchainImagesInfoEXT info = {.sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_EXT,
-			.swapchain = m_swap_chain,
-			.imageIndexCount = 1,
-			.pImageIndices = &m_current_image};
-		VkResult res = vkReleaseSwapchainImagesEXT(GSDeviceVK::GetInstance()->GetDevice(), &info);
+		VkResult res;
+		if (GSDeviceVK::GetInstance()->GetOptionalExtensions().vk_swapchain_maintenance1_is_khr)
+		{
+			const VkReleaseSwapchainImagesInfoKHR info = {.sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_KHR,
+				.swapchain = m_swap_chain,
+				.imageIndexCount = 1,
+				.pImageIndices = &m_current_image};
+			res = vkReleaseSwapchainImagesKHR(GSDeviceVK::GetInstance()->GetDevice(), &info);
+		}
+		else
+		{
+			const VkReleaseSwapchainImagesInfoEXT info = {.sType = VK_STRUCTURE_TYPE_RELEASE_SWAPCHAIN_IMAGES_INFO_EXT,
+				.swapchain = m_swap_chain,
+				.imageIndexCount = 1,
+				.pImageIndices = &m_current_image};
+			res = vkReleaseSwapchainImagesEXT(GSDeviceVK::GetInstance()->GetDevice(), &info);
+		}
 		if (res != VK_SUCCESS)
-			LOG_VULKAN_ERROR(res, "vkReleaseSwapchainImagesEXT() failed: ");
+			LOG_VULKAN_ERROR(res, "vkReleaseSwapchainImages() failed: ");
 	}
 
 	m_image_acquire_result.reset();

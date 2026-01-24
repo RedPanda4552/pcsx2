@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include <QtWidgets/QInputDialog>
@@ -94,7 +94,7 @@ EmulationSettingsWidget::EmulationSettingsWidget(SettingsWindow* settings_dialog
 	const std::optional<int> cycle_rate =
 		dialog()->getIntValue("EmuCore/Speedhacks", "EECycleRate", sif ? std::nullopt : std::optional<int>(DEFAULT_EE_CYCLE_RATE));
 	m_ui.eeCycleRate->setCurrentIndex(cycle_rate.has_value() ? (std::clamp(cycle_rate.value(), MINIMUM_EE_CYCLE_RATE, MAXIMUM_EE_CYCLE_RATE) + (0 - MINIMUM_EE_CYCLE_RATE) + static_cast<int>(dialog()->isPerGameSettings())) : 0);
-	connect(m_ui.eeCycleRate, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](int index) {
+	connect(m_ui.eeCycleRate, &QComboBox::currentIndexChanged, this, [&](int index) {
 		std::optional<int> value;
 		if (!dialog()->isPerGameSettings() || index > 0)
 			value = MINIMUM_EE_CYCLE_RATE + index - static_cast<int>(dialog()->isPerGameSettings());
@@ -164,7 +164,6 @@ EmulationSettingsWidget::EmulationSettingsWidget(SettingsWindow* settings_dialog
 	dialog()->registerWidgetHelp(m_ui.rtcDateTime, tr("Real-Time Clock"), tr("Current date and time"),
 		tr("Real-time clock (RTC) used by the virtual PlayStation 2.<br>"
 		   "This time is only applied upon booting the PS2; changing it while in-game will have no effect.<br>"
-		   "NOTE: This assumes you have your PS2 set to the default timezone of GMT+0 and default DST of Summer Time.<br>"
 		   "Some games require an RTC date/time set after their release date."));
 	dialog()->registerWidgetHelp(m_ui.rtcUseSystemLocaleFormat, tr("Use System Locale Format"), tr("User Preference"),
 		tr("Uses the operating system's date/time format rather than \"yyyy-MM-dd HH:mm:ss\". May exclude seconds."));
@@ -219,7 +218,7 @@ void EmulationSettingsWidget::initializeSpeedCombo(QComboBox* cb, const char* se
 		cb->setCurrentIndex(custom_index);
 	}
 
-	connect(cb, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+	connect(cb, &QComboBox::currentIndexChanged, this,
 		[this, cb, section, key](int index) { handleSpeedComboChange(cb, section, key); });
 }
 

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "pcsx2/Achievements.h"
@@ -44,11 +44,6 @@ void Host::ReportInfoAsync(const std::string_view title, const std::string_view 
 
 void Host::ReportErrorAsync(const std::string_view title, const std::string_view message)
 {
-}
-
-bool Host::ConfirmMessage(const std::string_view title, const std::string_view message)
-{
-	return true;
 }
 
 void Host::OpenURL(const std::string_view url)

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -44,7 +44,7 @@ namespace x86Emitter
 	template <typename T>
 	static __fi bool is_s8(T imm)
 	{
-		return (s8)imm == (typename std::make_signed<T>::type)imm;
+		return (s8)imm == (std::make_signed_t<T>)imm;
 	}
 
 	template <typename T>

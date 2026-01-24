@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -22,8 +22,9 @@ public:
 	bool EscapeShortcutCommandLine(std::string* cmdline);
 
 protected:
-	QString m_title;
-	QString m_path;
-	bool m_desktop;
+	const QString m_title;
+	const QString m_path;
+
+private:
 	Ui::ShortcutCreationDialog m_ui;
 };

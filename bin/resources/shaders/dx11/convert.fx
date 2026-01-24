@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 struct VS_INPUT
@@ -80,6 +80,7 @@ PS_OUTPUT ps_downsample_copy(PS_INPUT input)
 	int DownsampleFactor = DOFFSET;
 	int2 ClampMin = int2(EMODA, EMODC);
 	float Weight = BGColor.x;
+	float step_multiplier = BGColor.y;
 
 	int2 coord = max(int2(input.p.xy) * DownsampleFactor, ClampMin);
 
@@ -88,7 +89,7 @@ PS_OUTPUT ps_downsample_copy(PS_INPUT input)
 	for (int yoff = 0; yoff < DownsampleFactor; yoff++)
 	{
 		for (int xoff = 0; xoff < DownsampleFactor; xoff++)
-			output.c += Texture.Load(int3(coord + int2(xoff, yoff), 0));
+			output.c += Texture.Load(int3(coord + int2(xoff * step_multiplier, yoff * step_multiplier), 0));
 	}
 	output.c /= Weight;
 	return output;

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -437,6 +437,13 @@ enum class GSTextureInRtMode : u8
 	MergeTargets,
 };
 
+enum class GSLimit24BitDepth : u8
+{
+	Disabled,
+	PrioritizeUpper,
+	PrioritizeLower,
+};
+
 enum class GSBilinearDirtyMode : u8
 {
 	Automatic,
@@ -461,6 +468,8 @@ enum class GSNativeScaling : u8
 	Off,
 	Normal,
 	Aggressive,
+	NormalUpscaled,
+	AggressiveUpscaled,
 	MaxCount
 };
 
@@ -716,7 +725,7 @@ struct Pcsx2Config
 
 		union
 		{
-			u64 bitset[2];
+			u64 bitsets[2];
 
 			struct
 			{
@@ -739,19 +748,20 @@ struct Pcsx2Config
 					OsdShowSpeed : 1,
 					OsdShowFPS : 1,
 					OsdShowVPS : 1,
-					OsdShowCPU : 1,
-					OsdShowGPU : 1,
 					OsdShowResolution : 1,
 					OsdShowGSStats : 1,
+					OsdShowCPU : 1,
+					OsdShowGPU : 1,
 					OsdShowIndicators : 1,
+					OsdShowFrameTimes : 1,
+					OsdShowHardwareInfo : 1,
+					OsdShowVersion : 1,
 					OsdShowSettings : 1,
 					OsdshowPatches : 1,
 					OsdShowInputs : 1,
-					OsdShowFrameTimes : 1,
-					OsdShowVersion : 1,
 					OsdShowVideoCapture : 1,
 					OsdShowInputRec : 1,
-					OsdShowHardwareInfo : 1,
+					OsdShowTextureReplacements : 1,
 					HWSpinGPUForReadbacks : 1,
 					HWSpinCPUForReadbacks : 1,
 					GPUPaletteConversion : 1,
@@ -781,6 +791,8 @@ struct Pcsx2Config
 					SaveAlpha : 1,
 					SaveInfo : 1,
 					SaveTransferImages : 1,
+					SaveDrawStats : 1,
+					SaveFrameStats : 1,
 					DumpReplaceableTextures : 1,
 					DumpReplaceableMipmaps : 1,
 					DumpTexturesWithFMVActive : 1,
@@ -844,6 +856,7 @@ struct Pcsx2Config
 		u8 UserHacks_CPUCLUTRender = 0;
 		GSGPUTargetCLUTMode UserHacks_GPUTargetCLUTMode = GSGPUTargetCLUTMode::Disabled;
 		GSTextureInRtMode UserHacks_TextureInsideRt = GSTextureInRtMode::Disabled;
+		GSLimit24BitDepth UserHacks_Limit24BitDepth = GSLimit24BitDepth::Disabled;
 		GSBilinearDirtyMode UserHacks_BilinearHack = GSBilinearDirtyMode::Automatic;
 		TriFiltering TriFilter = TriFiltering::Automatic;
 		s8 OverrideTextureBarriers = -1;
@@ -1320,7 +1333,7 @@ struct Pcsx2Config
 		InhibitScreensaver : 1,
 		BackupSavestate : 1,
 		McdFolderAutoManage : 1,
-		ManuallySetRealTimeClock : 1,
+		ManuallySetRealTimeClock : 1, // passes user-set real-time clock information to cdvd at startup
 		UseSystemLocaleFormat : 1, // presents OS time format instead of yyyy-MM-dd HH:mm:ss for manual RTC
 
 		HostFs : 1,

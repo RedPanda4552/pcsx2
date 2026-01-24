@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -10,6 +10,7 @@
 #include <ctime>
 #include <string>
 #include <memory>
+#include <optional>
 
 struct Pcsx2Config;
 
@@ -26,6 +27,8 @@ namespace FullscreenUI
 	void OpenPauseMenu();
 	bool OpenAchievementsWindow();
 	bool OpenLeaderboardsWindow();
+	void ReportStateLoadError(const std::string& message, std::optional<s32> slot, bool backup);
+	void ReportStateSaveError(const std::string& message, std::optional<s32> slot);
 
 	// NOTE: Only call from GS thread.
 	bool IsAchievementsWindowOpen();

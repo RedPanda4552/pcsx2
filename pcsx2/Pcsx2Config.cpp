@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "common/CocoaTools.h"
@@ -673,7 +673,7 @@ const char* Pcsx2Config::GSOptions::DEFAULT_CAPTURE_CONTAINER = "mp4";
 
 const char* Pcsx2Config::AchievementsOptions::OverlayPositionNames[(size_t)AchievementOverlayPosition::MaxCount + 1] = {
 	"TopLeft",
-	"TopCenter", 
+	"TopCenter",
 	"TopRight",
 	"CenterLeft",
 	"Center",
@@ -708,8 +708,8 @@ std::optional<bool> Pcsx2Config::GSOptions::TriStateToOptionalBoolean(int value)
 
 Pcsx2Config::GSOptions::GSOptions()
 {
-	bitset[0] = 0;
-	bitset[1] = 0;
+	bitsets[0] = 0;
+	bitsets[1] = 0;
 
 	PCRTCAntiBlur = true;
 	DisableInterlaceOffset = false;
@@ -728,19 +728,20 @@ Pcsx2Config::GSOptions::GSOptions()
 	OsdShowSpeed = false;
 	OsdShowFPS = false;
 	OsdShowVPS = false;
-	OsdShowCPU = false;
-	OsdShowGPU = false;
 	OsdShowResolution = false;
 	OsdShowGSStats = false;
+	OsdShowCPU = false;
+	OsdShowGPU = false;
 	OsdShowIndicators = true;
+	OsdShowFrameTimes = false;
+	OsdShowHardwareInfo = false;
+	OsdShowVersion = false;
 	OsdShowSettings = false;
 	OsdshowPatches = false;
 	OsdShowInputs = false;
-	OsdShowFrameTimes = false;
-	OsdShowVersion = false;
-	OsdShowHardwareInfo = false;
 	OsdShowVideoCapture = true;
 	OsdShowInputRec = true;
+	OsdShowTextureReplacements = false;
 
 	HWDownloadMode = GSHardwareDownloadMode::Enabled;
 	HWSpinGPUForReadbacks = false;
@@ -754,6 +755,7 @@ Pcsx2Config::GSOptions::GSOptions()
 	ManualUserHacks = false;
 	UserHacks_AlignSpriteX = false;
 	UserHacks_AutoFlush = GSHWAutoFlushLevel::Disabled;
+	UserHacks_Limit24BitDepth = GSLimit24BitDepth::Disabled;
 	UserHacks_CPUFBConversion = false;
 	UserHacks_ReadTCOnClose = false;
 	UserHacks_DisableDepthSupport = false;
@@ -798,7 +800,8 @@ bool Pcsx2Config::GSOptions::operator==(const GSOptions& right) const
 bool Pcsx2Config::GSOptions::OptionsAreEqual(const GSOptions& right) const
 {
 	return (
-		OpEqu(bitset) &&
+		OpEqu(bitsets[0]) &&
+		OpEqu(bitsets[1]) &&
 
 		OpEqu(InterlaceMode) &&
 		OpEqu(LinearPresent) &&
@@ -845,6 +848,7 @@ bool Pcsx2Config::GSOptions::OptionsAreEqual(const GSOptions& right) const
 		OpEqu(UserHacks_CPUCLUTRender) &&
 		OpEqu(UserHacks_GPUTargetCLUTMode) &&
 		OpEqu(UserHacks_TextureInsideRt) &&
+		OpEqu(UserHacks_Limit24BitDepth) &&
 		OpEqu(UserHacks_BilinearHack) &&
 		OpEqu(OverrideTextureBarriers) &&
 
@@ -959,6 +963,7 @@ void Pcsx2Config::GSOptions::LoadSave(SettingsWrapper& wrap)
 	SettingsWrapBitBool(OsdShowHardwareInfo);
 	SettingsWrapBitBool(OsdShowVideoCapture);
 	SettingsWrapBitBool(OsdShowInputRec);
+	SettingsWrapBitBool(OsdShowTextureReplacements);
 
 	SettingsWrapBitBool(HWSpinGPUForReadbacks);
 	SettingsWrapBitBool(HWSpinCPUForReadbacks);
@@ -980,6 +985,7 @@ void Pcsx2Config::GSOptions::LoadSave(SettingsWrapper& wrap)
 	SettingsWrapIntEnumEx(UserHacks_BilinearHack, "UserHacks_BilinearHack");
 	SettingsWrapBitBoolEx(UserHacks_NativePaletteDraw, "UserHacks_NativePaletteDraw");
 	SettingsWrapIntEnumEx(UserHacks_TextureInsideRt, "UserHacks_TextureInsideRt");
+	SettingsWrapIntEnumEx(UserHacks_Limit24BitDepth, "UserHacks_Limit24BitDepth");
 	SettingsWrapBitBoolEx(UserHacks_EstimateTextureRegion, "UserHacks_EstimateTextureRegion");
 	SettingsWrapBitBoolEx(FXAA, "fxaa");
 	SettingsWrapBitBool(ShadeBoost);
@@ -991,6 +997,8 @@ void Pcsx2Config::GSOptions::LoadSave(SettingsWrapper& wrap)
 	SettingsWrapBitBoolEx(SaveAlpha, "SaveAlpha");
 	SettingsWrapBitBoolEx(SaveInfo, "SaveInfo");
 	SettingsWrapBitBoolEx(SaveTransferImages, "SaveTransferImages");
+	SettingsWrapBitBoolEx(SaveDrawStats, "SaveDrawStats");
+	SettingsWrapBitBoolEx(SaveFrameStats, "SaveFrameStats");
 	SettingsWrapBitBool(DumpReplaceableTextures);
 	SettingsWrapBitBool(DumpReplaceableMipmaps);
 	SettingsWrapBitBool(DumpTexturesWithFMVActive);
@@ -1106,6 +1114,7 @@ void Pcsx2Config::GSOptions::MaskUserHacks()
 	UserHacks_CPUFBConversion = false;
 	UserHacks_ReadTCOnClose = false;
 	UserHacks_TextureInsideRt = GSTextureInRtMode::Disabled;
+	UserHacks_Limit24BitDepth = GSLimit24BitDepth::Disabled;
 	UserHacks_EstimateTextureRegion = false;
 	UserHacks_TCOffsetX = 0;
 	UserHacks_TCOffsetY = 0;
@@ -1841,6 +1850,7 @@ bool Pcsx2Config::PadOptions::Port::operator!=(const PadOptions::Port& right) co
 
 Pcsx2Config::AchievementsOptions::AchievementsOptions()
 {
+	bitset = 0;
 	Enabled = false;
 	HardcoreMode = false;
 	EncoreMode = false;
@@ -1900,7 +1910,7 @@ void Pcsx2Config::AchievementsOptions::LoadSave(SettingsWrapper& wrap)
 
 bool Pcsx2Config::AchievementsOptions::operator==(const AchievementsOptions& right) const
 {
-	return OpEqu(bitset) && OpEqu(NotificationsDuration) && OpEqu(LeaderboardsDuration) && 
+	return OpEqu(bitset) && OpEqu(NotificationsDuration) && OpEqu(LeaderboardsDuration) &&
 		   OpEqu(OverlayPosition) && OpEqu(NotificationPosition);
 }
 

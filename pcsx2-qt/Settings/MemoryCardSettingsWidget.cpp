@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include <QtGui/QDrag>
@@ -138,7 +138,7 @@ void MemoryCardSettingsWidget::autoSizeUI()
 void MemoryCardSettingsWidget::tryInsertCard(u32 slot, const QString& newCard)
 {
 	// handle where the card is dragged in from explorer or something
-	const int lastSlashPos = std::max(newCard.lastIndexOf('/'), newCard.lastIndexOf('\\'));
+	const qsizetype lastSlashPos = std::max(newCard.lastIndexOf('/'), newCard.lastIndexOf('\\'));
 	const std::string newCardStr(
 		(lastSlashPos >= 0) ? newCard.mid(0, lastSlashPos).toStdString() : newCard.toStdString());
 	if (newCardStr.empty())

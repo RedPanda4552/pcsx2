@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "Host.h"
@@ -1267,11 +1267,11 @@ std::string GSDeviceMTL::GetDriverInfo() const
 	return desc;
 }}
 
-void GSDeviceMTL::ResizeWindow(s32 new_window_width, s32 new_window_height, float new_window_scale)
+void GSDeviceMTL::ResizeWindow(u32 new_window_width, u32 new_window_height, float new_window_scale)
 {
 	m_window_info.surface_scale = new_window_scale;
 	if (!m_layer ||
-		(m_window_info.surface_width == static_cast<u32>(new_window_width) && m_window_info.surface_height == static_cast<u32>(new_window_height)))
+		(m_window_info.surface_width == new_window_width && m_window_info.surface_height == new_window_height))
 	{
 		return;
 	}
@@ -1600,31 +1600,19 @@ void GSDeviceMTL::RenderCopy(GSTexture* sTex, id<MTLRenderPipelineState> pipelin
 	g_perfmon.Put(GSPerfMon::DrawCalls, 1);
 }
 
-void GSDeviceMTL::StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, ShaderConvert shader, bool linear)
+void GSDeviceMTL::DoStretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect,
+	GSHWDrawConfig::ColorMaskSelector cms, ShaderConvert shader, bool linear)
 { @autoreleasepool {
 
-	pxAssert(linear ? SupportsBilinear(shader) : SupportsNearest(shader));
-
-	id<MTLRenderPipelineState> pipeline = m_convert_pipeline[static_cast<int>(shader)];
+	const LoadAction load_action = (cms.wrgba == 0xf) ? LoadAction::DontCareIfFull : LoadAction::Load;
+	id<MTLRenderPipelineState> pipeline;
+	if (HasVariableWriteMask(shader))
+		pipeline = m_convert_pipeline_copy_mask[GetShaderIndexForMask(shader, cms.wrgba)];
+	else
+		pipeline = m_convert_pipeline[static_cast<int>(shader)];
 	pxAssertRel(pipeline, fmt::format("No pipeline for {}", shaderName(shader)).c_str());
 
-	const LoadAction load_action = (ShaderConvertWriteMask(shader) == 0xf) ? LoadAction::DontCareIfFull : LoadAction::Load;
 	DoStretchRect(sTex, sRect, dTex, dRect, pipeline, linear, load_action, nullptr, 0);
-}}
-
-void GSDeviceMTL::StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, bool red, bool green, bool blue, bool alpha, ShaderConvert shader)
-{ @autoreleasepool {
-	int sel = 0;
-	if (red)   sel |= 1;
-	if (green) sel |= 2;
-	if (blue)  sel |= 4;
-	if (alpha) sel |= 8;
-	if (shader == ShaderConvert::RTA_CORRECTION) sel |= 16;
-	const int color_sel = sel & 15;
-
-	id<MTLRenderPipelineState> pipeline = m_convert_pipeline_copy_mask[sel];
-
-	DoStretchRect(sTex, sRect, dTex, dRect, pipeline, false, color_sel == 15 ? LoadAction::DontCareIfFull : LoadAction::Load, nullptr, 0);
 }}
 
 static_assert(sizeof(DisplayConstantBuffer) == sizeof(GSMTLPresentPSUniform));
@@ -1683,9 +1671,9 @@ void GSDeviceMTL::DrawMultiStretchRects(const MultiStretchRect* rects, u32 num_r
 		const u32 end = i * 4;
 		const u32 vertex_count = end - start;
 		const u32 index_count = vertex_count + (vertex_count >> 1); // 6 indices per 4 vertices
-		const int rta_bit = shader == ShaderConvert::RTA_CORRECTION ? 16 : 0;
+		pxAssert(HasVariableWriteMask(shader) || wmask == 0xf);
 		id<MTLRenderPipelineState> new_pipeline = wmask == 0xf ? m_convert_pipeline[static_cast<int>(shader)]
-		                                                       : m_convert_pipeline_copy_mask[wmask | rta_bit];
+		                                                       : m_convert_pipeline_copy_mask[GetShaderIndexForMask(shader, wmask)];
 		if (new_pipeline != pipeline)
 		{
 			pipeline = new_pipeline;
@@ -1754,7 +1742,7 @@ void GSDeviceMTL::FilteredDownsampleTexture(GSTexture* sTex, GSTexture* dTex, u3
 		[NSException raise:@"StretchRect Missing Pipeline" format:@"No pipeline for %d", static_cast<int>(shader)];
 
 	GSMTLDownsamplePSUniform uniform = { {static_cast<uint>(clamp_min.x), static_cast<uint>(clamp_min.x)}, downsample_factor,
-	  static_cast<float>(downsample_factor * downsample_factor) };
+	  static_cast<float>(downsample_factor * downsample_factor), (GSConfig.UserHacks_NativeScaling > GSNativeScaling::Aggressive) ? 2.0f : 1.0f };
 
 	DoStretchRect(sTex, GSVector4::zero(), dTex, dRect, pipeline, false, LoadAction::DontCareIfFull, &uniform, sizeof(uniform));
 }}
@@ -1890,6 +1878,7 @@ void GSDeviceMTL::MRESetHWPipelineState(GSHWDrawConfig::VSSelector vssel, GSHWDr
 		setFnConstantI(m_fn_constants, pssel.dither,                GSMTLConstantIndex_PS_DITHER);
 		setFnConstantI(m_fn_constants, pssel.dither_adjust,         GSMTLConstantIndex_PS_DITHER_ADJUST);
 		setFnConstantB(m_fn_constants, pssel.zclamp,                GSMTLConstantIndex_PS_ZCLAMP);
+		setFnConstantB(m_fn_constants, pssel.zfloor,                GSMTLConstantIndex_PS_ZFLOOR);
 		setFnConstantB(m_fn_constants, pssel.tcoffsethack,          GSMTLConstantIndex_PS_TCOFFSETHACK);
 		setFnConstantB(m_fn_constants, pssel.urban_chaos_hle,       GSMTLConstantIndex_PS_URBAN_CHAOS_HLE);
 		setFnConstantB(m_fn_constants, pssel.tales_of_abyss_hle,    GSMTLConstantIndex_PS_TALES_OF_ABYSS_HLE);
@@ -2092,6 +2081,7 @@ static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, HalfTexel)        == of
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, MinMax)           == offsetof(GSMTLMainPSUniform, uv_min_max));
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, STRange)          == offsetof(GSMTLMainPSUniform, st_range));
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, ChannelShuffle)   == offsetof(GSMTLMainPSUniform, channel_shuffle));
+static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, ChannelShuffleOffset) == offsetof(GSMTLMainPSUniform, channel_shuffle_offset));
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, TCOffsetHack)     == offsetof(GSMTLMainPSUniform, tc_offset));
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, STScale)          == offsetof(GSMTLMainPSUniform, st_scale));
 static_assert(offsetof(GSHWDrawConfig::PSConstantBuffer, DitherMatrix)     == offsetof(GSMTLMainPSUniform, dither_matrix));

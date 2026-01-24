@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -283,6 +283,7 @@ static fpuRegisters& fpuRegs = _cpuRegistersPack.fpuRegs;
 extern bool eeEventTestIsActive;
 
 void intUpdateCPUCycles();
+void intEventTest();
 void intSetBranch();
 
 // This is a special form of the interpreter's doBranch that is run from various

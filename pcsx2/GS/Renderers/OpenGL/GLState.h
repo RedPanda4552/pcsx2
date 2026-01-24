@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -40,6 +40,10 @@ namespace GLState
 
 	extern GSTextureOGL* rt; // render target
 	extern GSTextureOGL* ds; // Depth-Stencil
+
+	extern bool rt_written; // Render Target written
+	extern bool ds_written; // Depth Stencil written
+
 	extern GLuint tex_unit[8]; // shader input texture
 	extern GLuint64 tex_handle[8]; // shader input texture
 

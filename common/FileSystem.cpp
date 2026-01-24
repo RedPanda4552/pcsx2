@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "FileSystem.h"
@@ -28,7 +28,7 @@
 #endif
 
 #if defined(_WIN32)
-#include "RedtapeWindows.h"
+#include "common/RedtapeWindows.h"
 #include <io.h>
 #include <malloc.h>
 #include <pathcch.h>

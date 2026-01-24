@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "Achievements.h"
@@ -26,6 +26,7 @@
 #include "common/MD5Digest.h"
 #include "common/Path.h"
 #include "common/ScopedGuard.h"
+#include "common/SettingsInterface.h"
 #include "common/SmallString.h"
 #include "common/StringUtil.h"
 #include "common/Timer.h"
@@ -40,6 +41,7 @@
 #include <cstdlib>
 #include <functional>
 #include <limits>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -219,6 +221,11 @@ namespace Achievements
 	static rc_client_leaderboard_entry_list_t* s_leaderboard_nearby_entries;
 	static std::vector<std::pair<const rc_client_leaderboard_entry_t*, std::string>> s_leaderboard_user_icon_paths;
 	static bool s_is_showing_all_leaderboard_entries = false;
+	static u32 s_last_selected_leaderboard_id = 0;
+	static bool s_has_last_selected_leaderboard = false;
+	static bool s_restore_leaderboard_focus = false;
+	static float s_leaderboard_list_scroll = 0.0f;
+	static bool s_restore_leaderboard_scroll = false;
 
 	static std::vector<LeaderboardTrackerIndicator> s_active_leaderboard_trackers;
 	static std::vector<AchievementChallengeIndicator> s_active_challenge_indicators;
@@ -433,7 +440,25 @@ bool Achievements::Initialize()
 		IdentifyGame(VMManager::GetDiscCRC(), VMManager::GetCurrentCRC());
 
 	const std::string username = Host::GetBaseStringSettingValue("Achievements", "Username");
-	const std::string api_token = Host::GetBaseStringSettingValue("Achievements", "Token");
+
+	// Check the base settings file to see if the token is defined inside. Move if found.
+	std::string oldToken = Host::GetBaseStringSettingValue("Achievements", "Token");
+	if (!oldToken.empty())
+	{
+		auto secretsLock = Host::GetSecretsSettingsLock();
+		SettingsInterface* secretsInterface = Host::Internal::GetSecretsSettingsLayer();
+		secretsInterface->SetStringValue("Achievements", "Token", oldToken.c_str());
+		secretsInterface->Save();
+		
+		oldToken.clear();
+		
+		auto baseLock = Host::GetSettingsLock();
+		SettingsInterface* baseInterface = Host::Internal::GetBaseSettingsLayer();
+		baseInterface->DeleteValue("Achievements", "Token");
+		baseInterface->Save();
+	}
+
+	const std::string api_token = Host::GetStringSettingValue("Achievements", "Token");
 	if (!username.empty() && !api_token.empty())
 	{
 		Console.WriteLn("Achievements: Attempting login with user '%s'...", username.c_str());
@@ -483,6 +508,13 @@ bool Achievements::CreateClient(rc_client_t** client, std::unique_ptr<HTTPDownlo
 #endif
 
 	rc_client_set_userdata(new_client, http->get());
+
+	const std::string custom_host = Host::GetBaseStringSettingValue("Achievements", "Host", "");
+	if (!custom_host.empty())
+	{
+		Console.WriteLn("Achievements: Using custom host %s", custom_host.c_str());
+		rc_client_set_host(new_client, custom_host.c_str());
+	}
 
 	*client = new_client;
 	return true;
@@ -1011,20 +1043,10 @@ void Achievements::ClientLoadGameCallback(int result, const char* error_message,
 	s_has_leaderboards = has_leaderboards;
 	s_has_rich_presence = rc_client_has_rich_presence(client);
 	s_game_icon = {};
-	s_game_icon_url = {};
+	s_game_icon_url = info->badge_url;
 
 	// ensure fullscreen UI is ready for notifications
 	MTGS::RunOnGSThread(&ImGuiManager::InitializeFullscreenUI);
-
-	char url_buffer[URL_BUFFER_SIZE];
-	if (int err = rc_client_game_get_image_url(info, url_buffer, std::size(url_buffer)); err == RC_OK)
-	{
-		s_game_icon_url = url_buffer;
-	}
-	else
-	{
-		ReportRCError(err, "rc_client_game_get_image_url() failed: ");
-	}
 
 	if (const std::string_view badge_name = info->badge_name; !badge_name.empty())
 	{
@@ -1772,9 +1794,12 @@ void Achievements::ClientLoginWithPasswordCallback(int result, const char* error
 
 	// Store configuration.
 	Host::SetBaseStringSettingValue("Achievements", "Username", params->username);
-	Host::SetBaseStringSettingValue("Achievements", "Token", user->token);
 	Host::SetBaseStringSettingValue("Achievements", "LoginTimestamp", fmt::format("{}", std::time(nullptr)).c_str());
 	Host::CommitBaseSettingChanges();
+	
+	SettingsInterface* secretsInterface = Host::Internal::GetSecretsSettingsLayer();
+	secretsInterface->SetStringValue("Achievements", "Token", user->token);
+	secretsInterface->Save();
 
 	ShowLoginSuccess(client);
 }
@@ -1874,9 +1899,13 @@ void Achievements::Logout()
 
 	Console.WriteLn("Achievements: Clearing credentials...");
 	Host::RemoveBaseSettingValue("Achievements", "Username");
-	Host::RemoveBaseSettingValue("Achievements", "Token");
 	Host::RemoveBaseSettingValue("Achievements", "LoginTimestamp");
 	Host::CommitBaseSettingChanges();
+
+	auto secretsLock = Host::GetSecretsSettingsLock();
+	SettingsInterface* secretsInterface = Host::Internal::GetSecretsSettingsLayer();
+	secretsInterface->DeleteValue("Achievements", "Token");
+	secretsInterface->Save();
 }
 
 
@@ -1890,62 +1919,19 @@ bool Achievements::ConfirmSystemReset()
 	return true;
 }
 
-bool Achievements::ConfirmHardcoreModeDisable(const char* trigger)
+const char* Achievements::GetHardcoreModeDisableTitle()
 {
-#ifdef ENABLE_RAINTEGRATION
-	if (IsUsingRAIntegration())
-		return (RA_WarnDisableHardcore(trigger) != 0);
-#endif
-
-	// I really hope this doesn't deadlock :/
-	const bool confirmed = Host::ConfirmMessage(TRANSLATE("Achievements", "Confirm Hardcore Mode"),
-		fmt::format(TRANSLATE_FS("Achievements", "{0} cannot be performed while hardcore mode is active. Do you "
-												 "want to disable hardcore mode? {0} will be cancelled if you select No."),
-			trigger));
-	if (!confirmed)
-		return false;
-
-	DisableHardcoreMode();
-	return true;
+	return TRANSLATE("Achievements", "Confirm Hardcore Mode");
 }
 
-void Achievements::ConfirmHardcoreModeDisableAsync(const char* trigger, std::function<void(bool)> callback)
+std::string Achievements::GetHardcoreModeDisableText(const char* reason)
 {
-#ifdef ENABLE_RAINTEGRATION
-	if (IsUsingRAIntegration())
-	{
-		const bool result = (RA_WarnDisableHardcore(trigger) != 0);
-		callback(result);
-		return;
-	}
-#endif
-
-	MTGS::RunOnGSThread([trigger = TinyString(trigger), callback = std::move(callback)]() {
-		if (!FullscreenUI::Initialize())
-		{
-			Host::AddOSDMessage(fmt::format(TRANSLATE_FS("Cannot {} while hardcore mode is active.", trigger)),
-				Host::OSD_WARNING_DURATION);
-			callback(false);
-			return;
-		}
-
-		auto real_callback = [callback = std::move(callback)](bool res) mutable {
-			// don't run the callback in the middle of rendering the UI
-			Host::RunOnCPUThread([callback = std::move(callback), res]() {
-				if (res)
-					DisableHardcoreMode();
-				callback(res);
-			});
-		};
-
-		ImGuiFullscreen::OpenConfirmMessageDialog(
-			TRANSLATE_STR("Achievements", "Confirm Hardcore Mode"),
-			fmt::format(TRANSLATE_FS("Achievements", "{0} cannot be performed while hardcore mode is active. Do you "
-													 "want to disable hardcore mode? {0} will be cancelled if you select No."),
-				trigger),
-			std::move(real_callback), true, fmt::format(ICON_FA_CHECK " {}", TRANSLATE_SV("Achievements", "Yes")),
-			fmt::format(ICON_FA_XMARK " {}", TRANSLATE_SV("Achievements", "No")));
-	});
+	return fmt::format(
+		TRANSLATE_FS("Achievements",
+			"{0} cannot be performed while hardcore mode is active. "
+			"Do you want to disable hardcore mode? "
+			"{0} will be cancelled if you select No."),
+		reason);
 }
 
 void Achievements::ClearUIState()
@@ -2492,7 +2478,7 @@ void Achievements::DrawAchievementsWindow()
 			ImVec2(display_size.x, display_size.y - heading_height - LayoutScale(ImGuiFullscreen::LAYOUT_FOOTER_HEIGHT)),
 			"achievements", background, 0.0f, ImVec2(ImGuiFullscreen::LAYOUT_MENU_WINDOW_X_PADDING, 0.0f), 0))
 	{
-		static bool buckets_collapsed[NUM_RC_CLIENT_ACHIEVEMENT_BUCKETS] = {};
+		static std::map<std::pair<u32, u32>, bool> buckets_collapsed;
 		static const char* bucket_names[NUM_RC_CLIENT_ACHIEVEMENT_BUCKETS] = {
 			TRANSLATE_NOOP("Achievements", "Unknown"),
 			TRANSLATE_NOOP("Achievements", "Locked"),
@@ -2518,11 +2504,25 @@ void Achievements::DrawAchievementsWindow()
 
 				pxAssert(bucket.bucket_type < NUM_RC_CLIENT_ACHIEVEMENT_BUCKETS);
 
-				// TODO: Once subsets are supported, this will need to change.
-				bool& bucket_collapsed = buckets_collapsed[bucket.bucket_type];
-				bucket_collapsed ^=
-					ImGuiFullscreen::MenuHeadingButton(Host::TranslateToCString("Achievements", bucket_names[bucket.bucket_type]),
-						bucket_collapsed ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_UP);
+				bool& bucket_collapsed = buckets_collapsed[std::make_pair(bucket.subset_id, bucket.bucket_type)];
+				const char* translated_bucket_name = Host::TranslateToCString("Achievements", bucket_names[bucket.bucket_type]);
+
+				if (bucket.subset_id != 0)
+				{
+					const rc_client_subset_t* subset_info = rc_client_get_subset_info(s_client, bucket.subset_id);
+					bucket_collapsed ^=
+						ImGuiFullscreen::MenuHeadingButton(TinyString::from_format("{} - {}",
+							subset_info != nullptr ? subset_info->title : TRANSLATE("Achievements", "Unknown Subset"),
+							translated_bucket_name), bucket_collapsed ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_UP);
+				}
+				else
+				{
+					// Game without subsets
+					bucket_collapsed ^=
+						ImGuiFullscreen::MenuHeadingButton(translated_bucket_name,
+							bucket_collapsed ? ICON_FA_CHEVRON_DOWN : ICON_FA_CHEVRON_UP);
+				}
+
 				if (!bucket_collapsed)
 				{
 					for (u32 i = 0; i < bucket.num_achievements; i++)
@@ -2697,6 +2697,12 @@ bool Achievements::PrepareLeaderboardsWindow()
 		return false;
 	}
 
+	s_has_last_selected_leaderboard = false;
+	s_restore_leaderboard_focus = false;
+	s_last_selected_leaderboard_id = 0;
+	s_restore_leaderboard_scroll = false;
+	s_leaderboard_list_scroll = 0.0f;
+
 	return true;
 }
 
@@ -2737,8 +2743,12 @@ void Achievements::DrawLeaderboardsWindow()
 		heading_height += LayoutScale(ImGuiFullscreen::LAYOUT_MENU_BUTTON_HEIGHT_NO_SUMMARY) + spacing;
 	}
 
-	const float rank_column_width =
-		g_large_font.first->CalcTextSizeA(g_large_font.second, std::numeric_limits<float>::max(), -1.0f, "99999").x;
+	const float rank_column_width = std::max(
+		g_large_font.first->CalcTextSizeA(g_large_font.second, std::numeric_limits<float>::max(), -1.0f, "99999").x,
+		g_large_font.first
+			->CalcTextSizeA(
+				g_large_font.second, std::numeric_limits<float>::max(), -1.0f, TRANSLATE("Achievements", "Rank"))
+			.x);
 	const float name_column_width =
 		g_large_font.first->CalcTextSizeA(g_large_font.second, std::numeric_limits<float>::max(), -1.0f, "WWWWWWWWWWWWWWWWWWWWWW").x;
 	const float time_column_width =
@@ -2785,11 +2795,17 @@ void Achievements::DrawLeaderboardsWindow()
 			}
 			else
 			{
-				if (ImGuiFullscreen::FloatingButton(
-						ICON_FA_SQUARE_CARET_LEFT, 10.0f, 10.0f, -1.0f, -1.0f, 1.0f, 0.0f, true, g_large_font) ||
-					ImGuiFullscreen::WantsToCloseMenu())
+				const bool wants_to_go_back = ImGuiFullscreen::FloatingButton(
+												  ICON_FA_SQUARE_CARET_LEFT, 10.0f, 10.0f, -1.0f, -1.0f, 1.0f, 0.0f, true, g_large_font) ||
+												ImGuiFullscreen::WantsToCloseMenu();
+				if (wants_to_go_back)
 				{
 					close_leaderboard_on_exit = true;
+					if (s_has_last_selected_leaderboard)
+					{
+						s_restore_leaderboard_focus = true;
+						s_restore_leaderboard_scroll = true;
+					}
 				}
 			}
 
@@ -2880,19 +2896,25 @@ void Achievements::DrawLeaderboardsWindow()
 					"legend", false, ImGuiFullscreen::LAYOUT_MENU_BUTTON_HEIGHT_NO_SUMMARY, &visible, &hovered, &bb.Min, &bb.Max, 0, alpha);
 
 				const float midpoint = bb.Min.y + g_large_font.second + LayoutScale(4.0f);
-				float text_start_x = bb.Min.x + LayoutScale(15.0f) + padding;
+				const float icon_column_width = bb.Max.y - bb.Min.y;
+				float column_left = bb.Min.x + LayoutScale(15.0f) + padding;
 
 				ImGui::PushFont(g_large_font.first, g_large_font.second);
 
-				const ImRect rank_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
-				ImGui::RenderTextClipped(
-					rank_bb.Min, rank_bb.Max, TRANSLATE("Achievements", "Rank"), nullptr, nullptr, ImVec2(0.0f, 0.0f), &rank_bb);
-				text_start_x += rank_column_width + column_spacing;
+				const auto render_centered_heading = [&](const char* text, float width) {
+					const ImRect rect(ImVec2(column_left, bb.Min.y), ImVec2(column_left + width, midpoint));
+					ImGui::RenderTextClipped(rect.Min, rect.Max, text, nullptr, nullptr, ImVec2(0.5f, 0.0f), &rect);
+					column_left += width + column_spacing;
+				};
 
-				const ImRect user_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+				render_centered_heading(TRANSLATE("Achievements", "Rank"), rank_column_width);
+
+				const float name_column_total_width = icon_column_width + column_spacing + name_column_width;
+				const ImRect user_bb(ImVec2(column_left + icon_column_width + column_spacing, bb.Min.y),
+					ImVec2(column_left + name_column_total_width, midpoint));
 				ImGui::RenderTextClipped(
-					user_bb.Min, user_bb.Max, TRANSLATE("Achievements", "Name"), nullptr, nullptr, ImVec2(0.0f, 0.0f), &user_bb);
-				text_start_x += name_column_width + column_spacing;
+					user_bb.Min, user_bb.Max, TRANSLATE("Achievements", "Name"), nullptr, nullptr, ImVec2(0.5f, 0.0f), &user_bb);
+				column_left += name_column_total_width + column_spacing;
 
 				static const char* value_headings[NUM_RC_CLIENT_LEADERBOARD_FORMATS] = {
 					TRANSLATE_NOOP("Achievements", "Time"),
@@ -2900,16 +2922,16 @@ void Achievements::DrawLeaderboardsWindow()
 					TRANSLATE_NOOP("Achievements", "Value"),
 				};
 
-				const ImRect score_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
-				ImGui::RenderTextClipped(score_bb.Min, score_bb.Max,
+				render_centered_heading(
 					Host::TranslateToCString(
 						"Achievements", value_headings[std::min<u8>(s_open_leaderboard->format, NUM_RC_CLIENT_LEADERBOARD_FORMATS - 1)]),
-					nullptr, nullptr, ImVec2(0.0f, 0.0f), &score_bb);
-				text_start_x += time_column_width + column_spacing;
+					time_column_width);
 
-				const ImRect date_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
-				ImGui::RenderTextClipped(
-					date_bb.Min, date_bb.Max, TRANSLATE("Achievements", "Date Submitted"), nullptr, nullptr, ImVec2(0.0f, 0.0f), &date_bb);
+				const float date_column_width = std::max(bb.Max.x - column_left, 0.0f);
+				const ImRect date_bb(ImVec2(column_left, bb.Min.y), ImVec2(column_left + date_column_width, midpoint));
+				ImGui::RenderTextClipped(date_bb.Min, date_bb.Max, TRANSLATE("Achievements", "Date Submitted"), nullptr, nullptr,
+					ImVec2(0.5f, 0.0f), &date_bb);
+				column_left += date_column_width;
 
 				ImGui::PopFont();
 
@@ -2930,6 +2952,14 @@ void Achievements::DrawLeaderboardsWindow()
 				ImVec2(display_size.x, display_size.y - heading_height - LayoutScale(ImGuiFullscreen::LAYOUT_FOOTER_HEIGHT)),
 				"leaderboards", background, 0.0f, ImVec2(ImGuiFullscreen::LAYOUT_MENU_WINDOW_X_PADDING, 0.0f), 0))
 		{
+			if (s_restore_leaderboard_scroll)
+			{
+				ImGui::SetScrollY(s_leaderboard_list_scroll);
+				s_restore_leaderboard_scroll = false;
+			}
+
+			const bool had_pending_focus_request = s_restore_leaderboard_focus;
+
 			ImGuiFullscreen::BeginMenuButtons();
 
 			for (u32 bucket_index = 0; bucket_index < s_leaderboard_list->num_buckets; bucket_index++)
@@ -2940,6 +2970,9 @@ void Achievements::DrawLeaderboardsWindow()
 			}
 
 			ImGuiFullscreen::EndMenuButtons();
+
+			if (had_pending_focus_request && s_restore_leaderboard_focus)
+				s_restore_leaderboard_focus = false;
 		}
 		ImGuiFullscreen::EndFullscreenWindow();
 
@@ -3050,7 +3083,9 @@ void Achievements::DrawLeaderboardEntry(const rc_client_leaderboard_entry_t& ent
 		return;
 
 	const float midpoint = bb.Min.y + g_large_font.second + LayoutScale(4.0f);
-	float text_start_x = bb.Min.x + LayoutScale(15.0f);
+	const float column_padding = LayoutScale(15.0f);
+	const float icon_column_width = bb.Max.y - bb.Min.y;
+	float column_left = bb.Min.x + column_padding;
 	SmallString text;
 
 	text.format("{}", entry.rank);
@@ -3060,12 +3095,11 @@ void Achievements::DrawLeaderboardEntry(const rc_client_leaderboard_entry_t& ent
 	if (is_self)
 		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255, 242, 0, 255));
 
-	const ImRect rank_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+	const ImRect rank_bb(ImVec2(column_left, bb.Min.y), ImVec2(column_left + rank_column_width, midpoint));
 	ImGui::RenderTextClipped(rank_bb.Min, rank_bb.Max, text.c_str(), text.end_ptr(), nullptr, ImVec2(0.0f, 0.0f), &rank_bb);
-	text_start_x += rank_column_width + column_spacing;
+	column_left += rank_column_width + column_spacing;
 
-	const float icon_size = bb.Max.y - bb.Min.y;
-	const ImRect icon_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+	const ImRect icon_bb(ImVec2(column_left, bb.Min.y), ImVec2(column_left + icon_column_width, bb.Min.y + icon_column_width));
 	GSTexture* icon_tex = nullptr;
 	if (auto it = std::find_if(s_leaderboard_user_icon_paths.begin(), s_leaderboard_user_icon_paths.end(),
 			[&entry](const auto& it) { return it.first == &entry; });
@@ -3086,18 +3120,20 @@ void Achievements::DrawLeaderboardEntry(const rc_client_leaderboard_entry_t& ent
 	if (icon_tex)
 	{
 		ImGui::GetWindowDrawList()->AddImage(reinterpret_cast<ImTextureID>(icon_tex->GetNativeHandle()),
-			icon_bb.Min, icon_bb.Min + ImVec2(icon_size, icon_size));
+			icon_bb.Min, icon_bb.Min + ImVec2(icon_column_width, icon_column_width));
 	}
 
-	const ImRect user_bb(ImVec2(text_start_x + column_spacing + icon_size, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+	column_left += icon_column_width + column_spacing;
+
+	const ImRect user_bb(ImVec2(column_left, bb.Min.y), ImVec2(column_left + name_column_width, midpoint));
 	ImGui::RenderTextClipped(user_bb.Min, user_bb.Max, entry.user, nullptr, nullptr, ImVec2(0.0f, 0.0f), &user_bb);
-	text_start_x += name_column_width + column_spacing;
+	column_left += name_column_width + column_spacing;
 
-	const ImRect score_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+	const ImRect score_bb(ImVec2(column_left, bb.Min.y), ImVec2(column_left + time_column_width, midpoint));
 	ImGui::RenderTextClipped(score_bb.Min, score_bb.Max, entry.display, nullptr, nullptr, ImVec2(0.0f, 0.0f), &score_bb);
-	text_start_x += time_column_width + column_spacing;
+	column_left += time_column_width + column_spacing;
 
-	const ImRect time_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
+	const ImRect time_bb(ImVec2(column_left, bb.Min.y), ImVec2(bb.Max.x, midpoint));
 	const auto submit_time = FullscreenUI::TimeToPrintableString(entry.submitted);
 	ImGui::RenderTextClipped(time_bb.Min, time_bb.Max, submit_time.c_str(), submit_time.end_ptr(), nullptr, ImVec2(0.0f, 0.0f), &time_bb);
 
@@ -3129,6 +3165,13 @@ void Achievements::DrawLeaderboardListEntry(const rc_client_leaderboard_t* lboar
 	if (!visible)
 		return;
 
+	if (s_restore_leaderboard_focus && s_has_last_selected_leaderboard && lboard->id == s_last_selected_leaderboard_id)
+	{
+		ImGui::SetItemDefaultFocus();
+		ImGui::SetScrollHereY(0.5f);
+		s_restore_leaderboard_focus = false;
+	}
+
 	const float midpoint = bb.Min.y + g_large_font.second + LayoutScale(4.0f);
 	const float text_start_x = bb.Min.x + LayoutScale(15.0f);
 	const ImRect title_bb(ImVec2(text_start_x, bb.Min.y), ImVec2(bb.Max.x, midpoint));
@@ -3146,7 +3189,10 @@ void Achievements::DrawLeaderboardListEntry(const rc_client_leaderboard_t* lboar
 	}
 
 	if (pressed)
+	{
+		s_leaderboard_list_scroll = ImGui::GetScrollY();
 		OpenLeaderboard(lboard);
+	}
 }
 
 void Achievements::OpenLeaderboard(const rc_client_leaderboard_t* lboard)
@@ -3154,6 +3200,10 @@ void Achievements::OpenLeaderboard(const rc_client_leaderboard_t* lboard)
 	Console.WriteLn("Achievements: Opening leaderboard '%s' (%u)", lboard->title, lboard->id);
 
 	CloseLeaderboard();
+
+	s_last_selected_leaderboard_id = lboard->id;
+	s_has_last_selected_leaderboard = true;
+	s_restore_leaderboard_focus = false;
 
 	s_open_leaderboard = lboard;
 	s_is_showing_all_leaderboard_entries = false;

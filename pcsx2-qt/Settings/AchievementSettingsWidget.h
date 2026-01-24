@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -26,6 +26,7 @@ private Q_SLOTS:
 
 private:
 	void updateLoginState();
+	static const char* AUDIO_FILE_FILTER;
 
 	Ui::AchievementSettingsWidget m_ui;
 };

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GS/Renderers/SW/GSRendererSW.h"
@@ -374,7 +374,7 @@ void GSRendererSW::RewriteVerticesIfSTOverflow()
 					const GSVector4 q = (primclass == GS_SPRITE_CLASS) ? stcq[1].wwww() : stcq[j].wwww();
 					stcq[j] = stcq[j].blend32(uv_new * q, GSVector4::cast(rewrite));
 
-					vertex_copy[i + j].m[0] = GSVector4i::cast(stcq[j]).m;
+					vertex_copy[i + j].m[0] = GSVector4i::cast(stcq[j]);
 					vertex_copy[i + j].m[1] = vertex[index[i + j]].m[1];
 					index[i + j] = i + j;
 				}
@@ -1652,7 +1652,7 @@ void GSRendererSW::SharedData::UpdateSource()
 
 		std::string s;
 
-		for (size_t i = 0; m_tex[i].t; i++)
+		for (u32 i = 0; m_tex[i].t; i++)
 		{
 			const GIFRegTEX0& TEX0 = g_gs_renderer->GetTex0Layer(i);
 

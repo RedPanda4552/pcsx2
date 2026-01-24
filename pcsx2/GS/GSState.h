@@ -1,9 +1,10 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
 
 #include "GS/GS.h"
+#include "GS/GSPerfMon.h"
 #include "GS/GSLocalMemory.h"
 #include "GS/GSDrawingContext.h"
 #include "GS/GSDrawingEnvironment.h"
@@ -170,8 +171,9 @@ protected:
 	void UpdateVertexKick();
 
 	void GrowVertexBuffer();
-	bool IsAutoFlushDraw(u32 prim);
+	bool IsAutoFlushDraw(u32 prim, int& tex_layer);
 	template<u32 prim> void HandleAutoFlush();
+	bool EarlyDetectShuffle(u32 prim);
 	void CheckCLUTValidity(u32 prim);
 
 	template <u32 prim, bool auto_flush> void VertexKick(u32 skip);
@@ -209,13 +211,20 @@ protected:
 	void CorrectATEAlphaMinMax(const u32 atst, const int aref);
 
 public:
+	enum EEGS_TransferType
+	{
+		EE_to_GS,
+		GS_to_GS,
+		GS_to_EE
+	};
+
 	struct GSUploadQueue
 	{
 		GIFRegBITBLTBUF blit;
 		GSVector4i rect;
 		int draw;
 		bool zero_clear;
-		bool ee_to_gs;
+		EEGS_TransferType transfer_type;
 	};
 
 	enum NoGapsType
@@ -249,7 +258,7 @@ public:
 	bool m_using_temp_z = false;
 	bool m_temp_z_full_copy = false;
 	bool m_in_target_draw = false;
-	bool m_channel_shuffle_abort = false;
+	bool m_channel_shuffle_finish = false;
 
 	u32 m_target_offset = 0;
 	u8 m_scanmask_used = 0;
@@ -264,7 +273,24 @@ public:
 	static int s_last_transfer_draw_n;
 	static int s_transfer_n;
 
+	GSPerfMon m_perfmon_frame; // Track stat across a frame.
+	GSPerfMon m_perfmon_draw;  // Track stat across a draw.
+
 	static constexpr u32 STATE_VERSION = 9;
+
+	#define PRIM_REG_MASK 0x7FF
+	#define MIPTBP_REG_MASK ((1ULL << 60) - 1ULL)
+	#define CLAMP_REG_MASK ((1ULL << 44) - 1ULL)
+	#define TEX1_REG_MASK 0xFFF001803FDULL
+	#define XYOFFSET_REG_MASK 0x0000FFFF0000FFFFULL
+	#define TEXA_REG_MASK 0xFF000080FFULL
+	#define FOGCOL_REG_MASK 0xFFFFFF
+	#define SCISSOR_REG_MASK 0x7FF07FF07FF07FFULL
+	#define ALPHA_REG_MASK 0xFF000000FFULL
+	#define DIMX_REG_MASK 0x7777777777777777ULL
+	#define FRAME_REG_MASK 0xFFFFFFFF3F3F01FFULL
+	#define ZBUF_REG_MASK 0x10F0001FFULL
+	#define TEST_REG_MASK 0x7FFFF
 
 	enum REG_DIRTY
 	{
@@ -382,7 +408,7 @@ public:
 
 		// Calculate framebuffer read offsets, should be considered if only one circuit is enabled, or difference is more than 1 line.
 		// Only considered if "Anti-blur" is enabled.
-		void CalculateFramebufferOffset(bool scanmask);
+		void CalculateFramebufferOffset(bool scanmask, GSRegDISPFB framebuffer0Reg, GSRegDISPFB framebuffer1Reg);
 
 		// Used in software mode to align the buffer when reading. Offset is accounted for (block aligned) by GetOutput.
 		void RemoveFramebufferOffset(int display);

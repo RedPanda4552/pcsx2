@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-2.0+
 
 #include "MipsStackWalk.h"
@@ -108,7 +108,7 @@ namespace MipsStackWalk
 
 		if (entry == INVALIDTARGET)
 		{
-			stop = std::max<s64>(0, (s64)start - LONGEST_FUNCTION);
+			stop = static_cast<u32>(std::max<s64>(0, (s64)start - LONGEST_FUNCTION));
 		}
 
 		for (u32 pc = start; cpu->isValidAddress(pc) && pc >= stop; pc -= 4)

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GS/GSCapture.h"
@@ -10,7 +10,7 @@
 #include "SPU2/spu2.h"
 #include "Host.h"
 #include "Host/AudioStream.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 #include "common/Assertions.h"
 #include "common/Console.h"
 #include "common/BitUtils.h"

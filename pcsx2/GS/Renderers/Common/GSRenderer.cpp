@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "ImGui/FullscreenUI.h"
@@ -22,7 +22,7 @@
 #include "common/Timer.h"
 
 #include "fmt/format.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 
 #include <algorithm>
 #include <array>
@@ -94,8 +94,8 @@ bool GSRenderer::Merge(int field)
 	}
 
 	// Need to do this here, if the user has Anti-Blur enabled, these offsets can get wiped out/changed.
-	const bool game_deinterlacing = (m_regs->DISP[0].DISPFB.DBY != PCRTCDisplays.PCRTCDisplays[0].prevFramebufferReg.DBY) !=
-									(m_regs->DISP[1].DISPFB.DBY != PCRTCDisplays.PCRTCDisplays[1].prevFramebufferReg.DBY);
+	const bool game_deinterlacing = (PCRTCDisplays.PCRTCDisplays[0].prevFramebufferOffsets.y != PCRTCDisplays.PCRTCDisplays[0].framebufferOffsets.y) !=
+	                                (PCRTCDisplays.PCRTCDisplays[1].prevFramebufferOffsets.y != PCRTCDisplays.PCRTCDisplays[1].framebufferOffsets.y);
 
 	// Only need to check the right/bottom on software renderer, hardware always gets the full texture then cuts a bit out later.
 	if (PCRTCDisplays.FrameRectMatch() && !PCRTCDisplays.FrameWrap() && !feedback_merge)
@@ -156,19 +156,10 @@ bool GSRenderer::Merge(int field)
 	bool is_bob = GSConfig.InterlaceMode == GSInterlaceMode::BobTFF || GSConfig.InterlaceMode == GSInterlaceMode::BobBFF;
 
 	// FFMD (half frames) requires blend deinterlacing, so automatically use that. Same when SCANMSK is used but not blended in the merge circuit (Alpine Racer 3).
-	if (GSConfig.InterlaceMode != GSInterlaceMode::Automatic || (!m_regs->SMODE2.FFMD && !scanmask_frame))
+	if (GSConfig.InterlaceMode != GSInterlaceMode::Automatic || (!game_deinterlacing && !m_regs->SMODE2.FFMD && !scanmask_frame))
 	{
-		// If the game is offsetting each frame itself and we're using full height buffers, we can offset this with Bob.
-		if (game_deinterlacing && !scanmask_frame && GSConfig.InterlaceMode == GSInterlaceMode::Automatic)
-		{
-			mode = 1; // Bob.
-			is_bob = true;
-		}
-		else
-		{
-			field2 = ((static_cast<int>(GSConfig.InterlaceMode) - 2) & 1);
-			mode = ((static_cast<int>(GSConfig.InterlaceMode) - 2) >> 1);
-		}
+		field2 = ((static_cast<int>(GSConfig.InterlaceMode) - 2) & 1);
+		mode = ((static_cast<int>(GSConfig.InterlaceMode) - 2) >> 1);
 	}
 
 	for (int i = 0; i < 2; i++)
@@ -591,6 +582,13 @@ void GSRenderer::VSync(u32 field, bool registers_written, bool idle_frame)
 
 		if (GSConfig.SaveTransferImages)
 			DumpTransferImages();
+
+		if (GSConfig.SaveFrameStats)
+		{
+			m_perfmon_frame = g_perfmon - m_perfmon_frame;
+			m_perfmon_frame.Dump(GetDrawDumpPath("%05d_f%05lld_frame_stats.txt", s_n, g_perfmon.GetFrame()), GSIsHardwareRenderer());
+			m_perfmon_frame = g_perfmon;
+		}
 	}
 
 	const int fb_sprite_blits = g_perfmon.GetDisplayFramebufferSpriteBlits();
@@ -706,6 +704,15 @@ void GSRenderer::VSync(u32 field, bool registers_written, bool idle_frame)
 	{
 		u32 screenshot_width, screenshot_height;
 		std::vector<u32> screenshot_pixels;
+
+		if (GSConfig.LinearPresent == GSPostBilinearMode::BilinearSharp)
+		{
+			const GSTexture* current = g_gs_device->GetCurrent();
+			const GSVector2i internal_res = GetInternalResolution();
+
+			if (current->GetWidth() > internal_res.x || current->GetHeight() > internal_res.y)
+				g_gs_device->Resize(internal_res.x, internal_res.y);
+		}
 
 		if (!m_dump && m_dump_frames > 0)
 		{

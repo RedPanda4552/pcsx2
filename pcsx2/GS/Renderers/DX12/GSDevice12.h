@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -21,6 +21,14 @@ namespace D3D12MA
 	class Allocator;
 }
 
+struct D3D12CommandList
+{
+	// Main command list
+	wil::com_ptr_nothrow<ID3D12GraphicsCommandList4> list4;
+	// Enhanced barriers command list
+	wil::com_ptr_nothrow<ID3D12GraphicsCommandList7> list7;
+};
+
 class GSDevice12 final : public GSDevice
 {
 public:
@@ -42,6 +50,12 @@ public:
 		NUM_TIMESTAMP_QUERIES_PER_CMDLIST = 2,
 	};
 
+	union D3D12_RESOURCE_DESCU
+	{
+		D3D12_RESOURCE_DESC1 desc1;
+		D3D12_RESOURCE_DESC desc;
+	};
+
 	__fi IDXGIAdapter1* GetAdapter() const { return m_adapter.get(); }
 	__fi ID3D12Device* GetDevice() const { return m_device.get(); }
 	__fi ID3D12CommandQueue* GetCommandQueue() const { return m_command_queue.get(); }
@@ -50,14 +64,16 @@ public:
 	/// Returns the PCI vendor ID of the device, if known.
 	u32 GetAdapterVendorID() const;
 
+	bool UseEnhancedBarriers() const { return m_enhanced_barriers; }
+
 	/// Returns the current command list, commands can be recorded directly.
-	ID3D12GraphicsCommandList4* GetCommandList() const
+	const D3D12CommandList& GetCommandList() const
 	{
-		return m_command_lists[m_current_command_list].command_lists[1].get();
+		return m_command_lists[m_current_command_list].command_lists[1];
 	}
 
 	/// Returns the init command list for uploading.
-	ID3D12GraphicsCommandList4* GetInitCommandList();
+	const D3D12CommandList& GetInitCommandList();
 
 	/// Returns the per-frame SRV/CBV/UAV allocator.
 	D3D12DescriptorAllocator& GetDescriptorAllocator()
@@ -99,6 +115,9 @@ public:
 	/// Test for support for the specified texture format.
 	bool SupportsTextureFormat(DXGI_FORMAT format);
 
+	// Partial depth copies require ProgrammableSamplePositions tier 1.
+	bool SupportsProgrammableSamplePositions();
+
 	enum class WaitType
 	{
 		None, ///< Don't wait (async)
@@ -134,7 +153,7 @@ private:
 	struct CommandListResources
 	{
 		std::array<ComPtr<ID3D12CommandAllocator>, 2> command_allocators;
-		std::array<ComPtr<ID3D12GraphicsCommandList4>, 2> command_lists;
+		std::array<D3D12CommandList, 2> command_lists;
 		D3D12DescriptorAllocator descriptor_allocator;
 		D3D12GroupedSamplerAllocator<SAMPLER_GROUP_SIZE> sampler_allocator;
 		std::vector<std::pair<D3D12MA::Allocation*, ID3D12DeviceChild*>> pending_resources;
@@ -143,6 +162,8 @@ private:
 		bool init_command_list_used = false;
 		bool has_timestamp_query = false;
 	};
+
+	void LoadAgilitySDK();
 
 	bool CreateDevice(u32& vendor_id);
 	bool CreateDescriptorHeaps();
@@ -170,6 +191,7 @@ private:
 	double m_timestamp_frequency = 0.0;
 	float m_accumulated_gpu_time = 0.0f;
 	bool m_gpu_timing_enabled = false;
+	bool m_programmable_sample_positions = false;
 
 	D3D12DescriptorHeapManager m_descriptor_heap_manager;
 	D3D12DescriptorHeapManager m_rtv_heap_manager;
@@ -292,6 +314,7 @@ private:
 	bool m_allow_tearing_supported = false;
 	bool m_using_allow_tearing = false;
 	bool m_is_exclusive_fullscreen = false;
+	bool m_enhanced_barriers = true;
 	bool m_device_lost = false;
 
 	ComPtr<ID3D12RootSignature> m_tfx_root_signature;
@@ -373,6 +396,8 @@ private:
 	ComPtr<ID3DBlob> GetUtilityVertexShader(const std::string& source, const char* entry_point);
 	ComPtr<ID3DBlob> GetUtilityPixelShader(const std::string& source, const char* entry_point);
 
+	void FeedbackBarrier(const GSTexture12* texture);
+
 	bool CheckFeatures(const u32& vendor_id);
 	bool CreateNullTexture();
 	bool CreateBuffers();
@@ -390,6 +415,10 @@ private:
 
 	void DestroyResources();
 
+protected:
+	virtual void DoStretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect,
+		GSHWDrawConfig::ColorMaskSelector cms, ShaderConvert shader, bool linear) override;
+
 public:
 	GSDevice12();
 	~GSDevice12() override;
@@ -403,7 +432,7 @@ public:
 	void Destroy() override;
 
 	bool UpdateWindow() override;
-	void ResizeWindow(s32 new_window_width, s32 new_window_height, float new_window_scale) override;
+	void ResizeWindow(u32 new_window_width, u32 new_window_height, float new_window_scale) override;
 	bool SupportsExclusiveFullscreen() const override;
 	void DestroySurface() override;
 	std::string GetDriverInfo() const override;
@@ -428,10 +457,6 @@ public:
 
 	void CopyRect(GSTexture* sTex, GSTexture* dTex, const GSVector4i& r, u32 destX, u32 destY) override;
 
-	void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect,
-		ShaderConvert shader = ShaderConvert::COPY, bool linear = true) override;
-	void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, bool red,
-		bool green, bool blue, bool alpha, ShaderConvert shader = ShaderConvert::COPY) override;
 	void PresentRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect,
 		PresentShader shader, float shaderTime, bool linear) override;
 	void UpdateCLUTTexture(
@@ -456,17 +481,17 @@ public:
 	void IASetVertexBuffer(const void* vertex, size_t stride, size_t count);
 	void IASetIndexBuffer(const void* index, size_t count);
 
-	void PSSetShaderResource(int i, GSTexture* sr, bool check_state);
+	void PSSetShaderResource(int i, GSTexture* sr, bool check_state, bool feedback = false);
 	void PSSetSampler(GSHWDrawConfig::SamplerSelector sel);
 
-	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i& scissor);
+	void OMSetRenderTargets(GSTexture* rt, GSTexture* ds, const GSVector4i& scissor, bool depth_read = false);
 
 	void SetVSConstantBuffer(const GSHWDrawConfig::VSConstantBuffer& cb);
 	void SetPSConstantBuffer(const GSHWDrawConfig::PSConstantBuffer& cb);
 	bool BindDrawPipeline(const PipelineSelector& p);
 
 	void RenderHW(GSHWDrawConfig& config) override;
-	void SendHWDraw(const PipelineSelector& pipe, const GSHWDrawConfig& config, GSTexture12* draw_rt_clone, GSTexture12* draw_rt, const bool one_barrier, const bool full_barrier, const bool skip_first_barrier);
+	void SendHWDraw(const PipelineSelector& pipe, const GSHWDrawConfig& config, GSTexture12* draw_rt, const bool feedback, const bool one_barrier, const bool full_barrier);
 
 	void UpdateHWPipelineSelector(GSHWDrawConfig& config);
 	void UploadHWDrawVerticesAndIndices(const GSHWDrawConfig& config);
@@ -580,6 +605,7 @@ private:
 
 	GSTexture12* m_current_render_target = nullptr;
 	GSTexture12* m_current_depth_target = nullptr;
+	bool m_current_depth_read_only = false;
 
 	D3D12_VIEWPORT m_viewport = {0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
 	GSVector4i m_scissor = GSVector4i::zero();

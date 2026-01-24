@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GS/GS.h"
@@ -174,6 +174,40 @@ const char* GSUtil::GetACName(u32 ac)
 {
 	static constexpr const char* names[] = {"PRMODE", "PRIM"};
 	return (ac < std::size(names)) ? names[ac] : "";
+}
+
+const char* GSUtil::GetPerfMonCounterName(GSPerfMon::counter_t counter, bool hw)
+{
+	if (hw)
+	{
+		static constexpr const char* names_hw[GSPerfMon::CounterLastHW] = {
+			"Prim",
+			"Draw",
+			"DrawCalls",
+			"Readbacks",
+			"Swizzle",
+			"Unswizzle",
+			"TextureCopies",
+			"TextureUploads",
+			"Barriers",
+			"RenderPasses"
+		};
+		return counter < std::size(names_hw) ? names_hw[counter] : "";
+	}
+	else
+	{
+		static constexpr const char* names_sw[GSPerfMon::CounterLastSW] = {
+			"Prim",
+			"Draw",
+			"DrawCalls",
+			"Readbacks",
+			"Swizzle",
+			"Unswizzle",
+			"Fillrate",
+			"SyncPoint"
+		};
+		return counter < std::size(names_sw) ? names_sw[counter] : "";
+	}
 }
 
 const u32* GSUtil::HasSharedBitsPtr(u32 dpsm)

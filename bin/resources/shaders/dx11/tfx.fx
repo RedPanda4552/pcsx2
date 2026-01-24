@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #define FMT_32 0
@@ -71,6 +71,7 @@
 #define PS_DITHER 0
 #define PS_DITHER_ADJUST 0
 #define PS_ZCLAMP 0
+#define PS_ZFLOOR 0
 #define PS_SCANMSK 0
 #define PS_AUTOMATIC_LOD 0
 #define PS_MANUAL_LOD 0
@@ -138,7 +139,7 @@ struct PS_OUTPUT
 #endif
 #endif
 #endif
-#if PS_ZCLAMP
+#if PS_ZCLAMP || PS_ZFLOOR
 	float depth : SV_Depth;
 #endif
 };
@@ -167,6 +168,7 @@ cbuffer cb1
 	float4 LODParams;
 	float4 STRange;
 	int4 ChannelShuffle;
+	float2 ChannelShuffleOffset;
 	float2 TC_OffsetHack;
 	float2 STScale;
 	float4x4 DitherMatrix;
@@ -739,7 +741,7 @@ float4 fog(float4 c, float f)
 {
 	if(PS_FOG)
 	{
-		c.rgb = trunc(lerp(FogColor, c.rgb, f));
+		c.rgb = trunc(lerp(FogColor, c.rgb, (f * 255.0f) / 256.0f));
 	}
 
 	return c;
@@ -756,17 +758,17 @@ float4 ps_color(PS_INPUT input)
 #endif
 
 #if PS_CHANNEL_FETCH == 1
-	float4 T = fetch_red(int2(input.p.xy));
+	float4 T = fetch_red(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 2
-	float4 T = fetch_green(int2(input.p.xy));
+	float4 T = fetch_green(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 3
-	float4 T = fetch_blue(int2(input.p.xy));
+	float4 T = fetch_blue(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 4
-	float4 T = fetch_alpha(int2(input.p.xy));
+	float4 T = fetch_alpha(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 5
-	float4 T = fetch_rgb(int2(input.p.xy));
+	float4 T = fetch_rgb(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_CHANNEL_FETCH == 6
-	float4 T = fetch_gXbY(int2(input.p.xy));
+	float4 T = fetch_gXbY(int2(input.p.xy + ChannelShuffleOffset));
 #elif PS_DEPTH_FMT > 0
 	float4 T = sample_depth(st_int, input.p.xy);
 #else
@@ -1209,8 +1211,16 @@ PS_OUTPUT ps_main(PS_INPUT input)
 
 #endif // PS_DATE != 1/2
 
+#if PS_ZFLOOR
+float depth_value = floor(input.p.z * exp2(32.0f)) * exp2(-32.0f);
+#else
+float depth_value = input.p.z;
+#endif
+
 #if PS_ZCLAMP
-	output.depth = min(input.p.z, MaxDepthPS);
+	output.depth = min(depth_value, MaxDepthPS);
+#elif PS_ZFLOOR
+	output.depth = depth_value;
 #endif
 
 	return output;

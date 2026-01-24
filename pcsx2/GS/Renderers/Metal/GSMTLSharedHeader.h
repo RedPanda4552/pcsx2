@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -72,6 +72,7 @@ struct GSMTLDownsamplePSUniform
 	vector_uint2 clamp_min;
 	uint downsample_factor;
 	float weight;
+	float step_multiplier;
 };
 
 struct GSMTLMainVertex
@@ -128,6 +129,7 @@ struct GSMTLMainPSUniform
 		unsigned int green_mask;
 		unsigned int green_shift;
 	} channel_shuffle;
+	vector_float2 channel_shuffle_offset;
 	vector_float2 tc_offset;
 	vector_float2 st_scale;
 	matrix_float4x4 dither_matrix;
@@ -207,6 +209,7 @@ enum GSMTLFnConstants
 	GSMTLConstantIndex_PS_DITHER,
 	GSMTLConstantIndex_PS_DITHER_ADJUST,
 	GSMTLConstantIndex_PS_ZCLAMP,
+	GSMTLConstantIndex_PS_ZFLOOR,
 	GSMTLConstantIndex_PS_TCOFFSETHACK,
 	GSMTLConstantIndex_PS_URBAN_CHAOS_HLE,
 	GSMTLConstantIndex_PS_TALES_OF_ABYSS_HLE,

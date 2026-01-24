@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "Host/AudioStream.h"
@@ -13,7 +13,7 @@
 
 #include "cubeb/cubeb.h"
 #include "fmt/format.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 
 #ifdef _WIN32
 #include "common/RedtapeWindows.h"
@@ -312,7 +312,7 @@ std::vector<std::pair<std::string, std::string>> AudioStream::GetCubebDriverName
 	names.emplace_back(std::string(), TRANSLATE_STR("AudioStream", "Default"));
 
 	auto cubeb_names = cubeb_get_backend_names();
-	for (int i = 0; i < cubeb_names.count; i++)
+	for (size_t i = 0; i < cubeb_names.count; i++)
 		names.emplace_back(cubeb_names.names[i], cubeb_names.names[i]);
 
 	return names;

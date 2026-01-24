@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GameListModel.h"
@@ -7,6 +7,7 @@
 #include "QtHost.h"
 #include "QtUtils.h"
 
+#include "Settings/InterfaceSettingsWidget.h"
 #include "pcsx2/GameList.h"
 #include "pcsx2/Host.h"
 
@@ -44,6 +45,25 @@ static const char* SUPPORTED_FORMATS_STRING = QT_TRANSLATE_NOOP(GameListWidget,
 static constexpr float MIN_SCALE = 0.1f;
 static constexpr float MAX_SCALE = 2.0f;
 
+static constexpr GameListModel::Column DEFAULT_SORT_COLUMN = GameListModel::Column_Title;
+static constexpr int DEFAULT_SORT_INDEX = static_cast<int>(DEFAULT_SORT_COLUMN);
+static constexpr Qt::SortOrder DEFAULT_SORT_ORDER = Qt::AscendingOrder;
+
+static constexpr std::array<int, GameListModel::Column_Count> DEFAULT_COLUMN_WIDTHS = {{
+	55, // type
+	85, // code
+	-1, // title
+	-1, // file title
+	75, // crc
+	95, // time played
+	90, // last played
+	80, // size
+	60, // region
+	120 // compatibility
+}};
+static_assert(static_cast<int>(DEFAULT_COLUMN_WIDTHS.size()) <= GameListModel::Column_Count,
+	"Game List: More default column widths than column types.");
+
 class GameListSortModel final : public QSortFilterProxyModel
 {
 public:
@@ -55,18 +75,21 @@ public:
 
 	void setFilterType(GameList::EntryType type)
 	{
+		beginFilterChange();
 		m_filter_type = type;
-		invalidateRowsFilter();
+		endFilterChange(Direction::Rows);
 	}
 	void setFilterRegion(GameList::Region region)
 	{
+		beginFilterChange();
 		m_filter_region = region;
-		invalidateRowsFilter();
+		endFilterChange(Direction::Rows);
 	}
 	void setFilterName(const QString& name)
 	{
+		beginFilterChange();
 		m_filter_name = name;
-		invalidateRowsFilter();
+		endFilterChange(Direction::Rows);
 	}
 
 	bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override
@@ -197,6 +220,8 @@ void GameListWidget::initialize()
 	m_sort_model->setSourceModel(m_model);
 
 	m_ui.setupUi(this);
+	m_ui.stack->installEventFilter(this);
+	m_ui.stack->setAutoFillBackground(false);
 
 	for (u32 type = 0; type < static_cast<u32>(GameList::EntryType::Count); type++)
 	{
@@ -233,7 +258,6 @@ void GameListWidget::initialize()
 
 	m_table_view = new QTableView(m_ui.stack);
 	m_table_view->setModel(m_sort_model);
-	m_table_view->setSortingEnabled(true);
 	m_table_view->setSelectionMode(QAbstractItemView::SingleSelection);
 	m_table_view->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_table_view->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -241,8 +265,9 @@ void GameListWidget::initialize()
 	m_table_view->setMouseTracking(true);
 	m_table_view->setShowGrid(false);
 	m_table_view->setCurrentIndex(QModelIndex());
-	m_table_view->horizontalHeader()->setHighlightSections(false);
 	m_table_view->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_table_view->horizontalHeader()->setHighlightSections(false);
+	m_table_view->horizontalHeader()->setSectionsMovable(true);
 	m_table_view->verticalHeader()->hide();
 	m_table_view->setVerticalScrollMode(QAbstractItemView::ScrollMode::ScrollPerPixel);
 
@@ -251,18 +276,28 @@ void GameListWidget::initialize()
 	m_table_view->setItemDelegateForColumn(8, new GameListIconStyleDelegate(this));
 	m_table_view->setItemDelegateForColumn(9, new GameListIconStyleDelegate(this));
 
-	loadTableViewColumnVisibilitySettings();
-	loadTableViewColumnSortSettings();
-
 	connect(m_table_view->selectionModel(), &QItemSelectionModel::currentChanged, this,
 		&GameListWidget::onSelectionModelCurrentChanged);
 	connect(m_table_view, &QTableView::activated, this, &GameListWidget::onTableViewItemActivated);
 	connect(m_table_view, &QTableView::customContextMenuRequested, this,
 		&GameListWidget::onTableViewContextMenuRequested);
 	connect(m_table_view->horizontalHeader(), &QHeaderView::customContextMenuRequested, this,
-		&GameListWidget::onTableViewHeaderContextMenuRequested);
+			&GameListWidget::onTableViewHeaderContextMenuRequested);
+
+	// Save state when header state changes (hiding and showing handled within onTableViewHeaderContextMenuRequested).
+	connect(m_table_view->horizontalHeader(), &QHeaderView::sectionMoved, this, &GameListWidget::onTableHeaderStateChanged);
+	connect(m_table_view->horizontalHeader(), &QHeaderView::sectionResized, this, &GameListWidget::onTableHeaderStateChanged);
 	connect(m_table_view->horizontalHeader(), &QHeaderView::sortIndicatorChanged, this,
-		&GameListWidget::saveTableViewColumnSortSettings);
+		[this](const int column, const Qt::SortOrder sort_order) { GameListWidget::saveSortSettings(column, sort_order); GameListWidget::onTableHeaderStateChanged(); });
+
+	// Load the last session's header state or create a new one.
+	if (Host::ContainsBaseSettingValue("GameListTableView", "HeaderState"))
+		loadTableHeaderState();
+	else
+		applyTableHeaderDefaults();
+
+	// After header state load to account for user-specified sort.
+	m_table_view->setSortingEnabled(true);
 
 	m_ui.stack->insertWidget(0, m_table_view);
 
@@ -294,7 +329,7 @@ void GameListWidget::initialize()
 	m_empty_ui.setupUi(m_empty_widget);
 	m_empty_ui.supportedFormats->setText(qApp->translate("GameListWidget", SUPPORTED_FORMATS_STRING));
 	connect(m_empty_ui.addGameDirectory, &QPushButton::clicked, this, [this]() { emit addGameDirectoryRequested(); });
-	connect(m_empty_ui.scanForNewGames, &QPushButton::clicked, this, [this]() { refresh(false); });
+	connect(m_empty_ui.scanForNewGames, &QPushButton::clicked, this, [this]() { refresh(false, true); });
 	connect(qApp, &QGuiApplication::applicationStateChanged, this, [this]() { GameListWidget::updateCustomBackgroundState(); });
 	m_ui.stack->insertWidget(2, m_empty_widget);
 
@@ -310,132 +345,106 @@ void GameListWidget::initialize()
 	setCustomBackground();
 }
 
-static void resizeAndPadImage(QImage* image, int expected_width, int expected_height, bool fill_with_top_left, bool expand_to_fill)
+void GameListWidget::setCustomBackground()
 {
-	const qreal dpr = image->devicePixelRatio();
-	const int dpr_expected_width = static_cast<int>(static_cast<qreal>(expected_width) * dpr);
-	const int dpr_expected_height = static_cast<int>(static_cast<qreal>(expected_height) * dpr);
-	if (image->width() == dpr_expected_width && image->height() == dpr_expected_height)
-		return;
-
-	// Resize
-	if (((static_cast<float>(image->width()) / static_cast<float>(image->height())) >=
-		(static_cast<float>(dpr_expected_width) / static_cast<float>(dpr_expected_height))) != expand_to_fill)
-	{
-		*image = image->scaledToWidth(dpr_expected_width, Qt::SmoothTransformation);
-	}
-	else
-	{
-		*image = image->scaledToHeight(dpr_expected_height, Qt::SmoothTransformation);
-	}
-
-	if (image->width() == dpr_expected_width && image->height() == dpr_expected_height)
-		return;
-
-	// Padding
-	int xoffs = 0;
-	int yoffs = 0;
-	const int image_width = image->width();
-	const int image_height = image->height();
-	if ((image_width < dpr_expected_width) != expand_to_fill)
-		xoffs = static_cast<int>(static_cast<qreal>((dpr_expected_width - image_width) / 2) / dpr);
-	if ((image_height < dpr_expected_height) != expand_to_fill)
-		yoffs = static_cast<int>(static_cast<qreal>((dpr_expected_height - image_height) / 2) / dpr);
-
-	QImage padded_image(dpr_expected_width, dpr_expected_height, QImage::Format_ARGB32);
-	padded_image.setDevicePixelRatio(dpr);
-	if (fill_with_top_left)
-		padded_image.fill(image->pixel(0, 0));
-	else
-		padded_image.fill(Qt::transparent);
-
-	// Painting
-	QPainter painter;
-	const float opacity = Host::GetBaseFloatSettingValue("UI", "GameListBackgroundOpacity");
-	if (painter.begin(&padded_image))
-	{
-		painter.setOpacity((static_cast<float>(opacity / 100.0f))); // Qt expects the range to be from 0.0 to 1.0
-		painter.setCompositionMode(QPainter::CompositionMode_Source);
-		painter.drawImage(xoffs, yoffs, *image);
-		painter.end();
-	}
-
-	*image = std::move(padded_image);
-}
-
-void GameListWidget::setCustomBackground(bool force_refresh)
-{
-	std::string path = Host::GetBaseStringSettingValue("UI", "GameListBackgroundPath");
-	bool enabled = Host::GetBaseBoolSettingValue("UI", "GameListBackgroundEnabled");
-	bool fill = Host::GetBaseBoolSettingValue("UI", "GameListBackgroundFill");
-
 	// Cleanup old animation if it still exists on gamelist
 	if (m_background_movie != nullptr)
 	{
+		m_background_movie->disconnect(this);
 		delete m_background_movie;
 		m_background_movie = nullptr;
 	}
 
+	// Get the path to the custom background
+	std::string path = Host::GetBaseStringSettingValue("UI", "GameListBackgroundPath");
 	if (!Path::IsAbsolute(path))
 		path = Path::Combine(EmuFolders::DataRoot, path);
 
-	// Only try to create background both if path are valid and custom background are enabled
-	if ((!path.empty() && FileSystem::FileExists(path.c_str())) && enabled)
+	// Only try to create background if path are valid
+	if (!path.empty() && FileSystem::FileExists(path.c_str()))
 	{
-		QMovie* new_movie;
-		if (Path::GetExtension(path) == "png")
-			// Use apng plugin
-			new_movie = new QMovie(QString::fromStdString(path), "apng", this);
-		else
-			new_movie = new QMovie(QString::fromStdString(path), QByteArray(), this);
-
-		if (new_movie->isValid())
-			m_background_movie = new_movie;
-		else
+		QString img_path = QString::fromStdString(path);
+		const QByteArray format = (img_path.endsWith(".png", Qt::CaseInsensitive)) ? QByteArray("apng") : QByteArray();
+		m_background_movie = new QMovie(img_path, format, this);
+		if (!m_background_movie->isValid())
 		{
 			Console.Warning("Failed to load background movie from: %s", path.c_str());
-			delete new_movie;
+			delete m_background_movie;
+			m_background_movie = nullptr;
 		}
 	}
 
-	// If there is no valid background then reset fallback to UI state
+	// If there is no valid background then reset fallback to default UI state
 	if (!m_background_movie)
 	{
-		m_ui.stack->setPalette(QApplication::palette());
+		m_background_pixmap = QPixmap();
+		m_ui.stack->setAutoFillBackground(true);
+		m_table_view->viewport()->setAutoFillBackground(true);
+		m_list_view->viewport()->setAutoFillBackground(true);
+
+		m_ui.stack->update();
 		m_table_view->setAlternatingRowColors(true);
 		return;
 	}
 
-	// Background is valid, connect the signals and start animation in gamelist
-	connect(m_background_movie, &QMovie::frameChanged, this, [this, fill]() { processBackgroundFrames(fill); });
-	updateCustomBackgroundState(force_refresh);
+	// Retrieve scaling setting
+	m_background_scaling = QtUtils::ScalingMode::Fit;
+	const std::string ar_value = Host::GetBaseStringSettingValue("UI", "GameListBackgroundMode", InterfaceSettingsWidget::BACKGROUND_SCALE_NAMES[static_cast<u8>(QtUtils::ScalingMode::Fit)]);
+	for (u8 i = 0; i < static_cast<u8>(QtUtils::ScalingMode::MaxCount); i++)
+	{
+		if (InterfaceSettingsWidget::BACKGROUND_SCALE_NAMES[i] != nullptr)
+		{
+			if (ar_value == InterfaceSettingsWidget::BACKGROUND_SCALE_NAMES[i])
+			{
+				m_background_scaling = static_cast<QtUtils::ScalingMode>(i);
+				break;
+			}
+		}
+	}
 
+	// Retrieve opacity setting
+	m_background_opacity = Host::GetBaseFloatSettingValue("UI", "GameListBackgroundOpacity", 100.0f);
+
+	// Selected Custom background is valid, connect the signals and start animation in gamelist
+	connect(m_background_movie, &QMovie::frameChanged, this, &GameListWidget::processBackgroundFrames, Qt::UniqueConnection);
+	m_ui.stack->setAutoFillBackground(false);
+	
+	m_table_view->viewport()->setAutoFillBackground(false);
+	m_list_view->viewport()->setAutoFillBackground(false);
+	updateCustomBackgroundState(true);
 	m_table_view->setAlternatingRowColors(false);
+	processBackgroundFrames();
 }
 
-void GameListWidget::updateCustomBackgroundState(bool force_start)
+void GameListWidget::updateCustomBackgroundState(const bool force_start)
 {
-	if (m_background_movie)
+	if (m_background_movie && m_background_movie->isValid())
 	{
 		if ((isVisible() && (isActiveWindow() || force_start)) && qGuiApp->applicationState() == Qt::ApplicationActive)
-			m_background_movie->start();
+			m_background_movie->setPaused(false);
 		else
-			m_background_movie->stop();
+			m_background_movie->setPaused(true);
 	}
 }
 
-void GameListWidget::processBackgroundFrames(bool fill_area)
+void GameListWidget::processBackgroundFrames()
 {
-	QImage img = m_background_movie->currentImage();
-	img.setDevicePixelRatio(devicePixelRatioF());
-	const int widget_width = m_ui.stack->width();
-	const int widget_height = m_ui.stack->height();
+	if (m_background_movie && m_background_movie->isValid() && isVisible())
+	{
+		const int widget_width = m_ui.stack->width();
+		const int widget_height = m_ui.stack->height();
 
-	resizeAndPadImage(&img, widget_width, widget_height, false, fill_area);
+		if (widget_width <= 0 || widget_height <= 0)
+			return;
 
-	QPalette new_palette(m_ui.stack->palette());
-	new_palette.setBrush(QPalette::Base, img);
-	m_ui.stack->setPalette(new_palette);
+		QPixmap pm = m_background_movie->currentPixmap();
+		const qreal dpr = devicePixelRatioF();
+
+		QtUtils::resizeAndScalePixmap(&pm, widget_width, widget_height, dpr, m_background_scaling, m_background_opacity);
+
+		m_background_pixmap = std::move(pm);
+		m_ui.stack->update();
+	}
 }
 
 bool GameListWidget::isShowingGameList() const
@@ -453,11 +462,11 @@ bool GameListWidget::getShowGridCoverTitles() const
 	return m_model->getShowCoverTitles();
 }
 
-void GameListWidget::refresh(bool invalidate_cache)
+void GameListWidget::refresh(bool invalidate_cache, bool popup_on_error)
 {
 	cancelRefresh();
 
-	m_refresh_thread = new GameListRefreshThread(invalidate_cache);
+	m_refresh_thread = new GameListRefreshThread(invalidate_cache, popup_on_error);
 	connect(m_refresh_thread, &GameListRefreshThread::refreshProgress, this, &GameListWidget::onRefreshProgress,
 		Qt::QueuedConnection);
 	connect(m_refresh_thread, &GameListRefreshThread::refreshComplete, this, &GameListWidget::onRefreshComplete,
@@ -554,18 +563,24 @@ void GameListWidget::onListViewContextMenuRequested(const QPoint& point)
 void GameListWidget::onTableViewHeaderContextMenuRequested(const QPoint& point)
 {
 	QMenu menu;
+	QHeaderView* header = m_table_view->horizontalHeader();
+	if (!header)
+		return;
 
+	int column_visual = 0;
 	for (int column = 0; column < GameListModel::Column_Count; column++)
 	{
+		// The "cover" column is the game grid and cannot be hidden.
 		if (column == GameListModel::Column_Cover)
 			continue;
 
-		QAction* action = menu.addAction(m_model->getColumnDisplayName(column));
+		column_visual = header->visualIndex(column);
+		QAction* action = menu.addAction(m_model->getColumnDisplayName(column_visual));
 		action->setCheckable(true);
-		action->setChecked(!m_table_view->isColumnHidden(column));
-		connect(action, &QAction::toggled, [this, column](bool enabled) {
-			m_table_view->setColumnHidden(column, !enabled);
-			saveTableViewColumnVisibilitySettings(column);
+		action->setChecked(!m_table_view->isColumnHidden(column_visual));
+		connect(action, &QAction::toggled, [this, column_visual](bool enabled) {
+			m_table_view->setColumnHidden(column_visual, !enabled);
+			onTableHeaderStateChanged();
 			resizeTableViewColumnsToFit();
 		});
 	}
@@ -708,7 +723,7 @@ void GameListWidget::resizeEvent(QResizeEvent* event)
 	QWidget::resizeEvent(event);
 	resizeTableViewColumnsToFit();
 	m_model->updateCacheSize(width(), height());
-	setCustomBackground();
+	processBackgroundFrames();
 }
 
 bool GameListWidget::event(QEvent* event)
@@ -716,6 +731,7 @@ bool GameListWidget::event(QEvent* event)
 	if (event->type() == QEvent::DevicePixelRatioChange)
 	{
 		m_model->setDevicePixelRatio(devicePixelRatioF());
+		processBackgroundFrames();
 		QWidget::event(event);
 		return true;
 	}
@@ -723,126 +739,163 @@ bool GameListWidget::event(QEvent* event)
 	return QWidget::event(event);
 }
 
+bool GameListWidget::eventFilter(QObject* watched, QEvent* event)
+{
+	if (watched == m_ui.stack && event->type() == QEvent::Paint)
+	{
+		if (!m_background_pixmap.isNull())
+		{
+			QPainter painter(m_ui.stack);
+			const auto* paint_event = static_cast<QPaintEvent*>(event);
+			painter.save();
+			painter.setClipRect(paint_event->rect());
+			painter.drawTiledPixmap(m_ui.stack->rect(), m_background_pixmap);
+			painter.restore();
+			return true;
+		}
+	}
+
+	return QWidget::eventFilter(watched, event);
+}
+
 void GameListWidget::resizeTableViewColumnsToFit()
 {
 	QtUtils::ResizeColumnsForTableView(m_table_view, {
-														 55, // type
-														 85, // code
-														 -1, // title
-														 -1, // file title
-														 75, // crc
-														 95, // time played
-														 90, // last played
-														 80, // size
-														 60, // region
-														 120, // compatibility
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Type],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Serial],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Title],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_FileTitle],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_CRC],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_TimePlayed],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_LastPlayed],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Size],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Region],
+														 DEFAULT_COLUMN_WIDTHS[GameListModel::Column_Compatibility],
 													 });
 }
 
-static std::string getColumnVisibilitySettingsKeyName(int column)
+void GameListWidget::loadTableHeaderState()
 {
-	return StringUtil::StdStringFromFormat("Show%s",
+	QHeaderView* header = m_table_view->horizontalHeader();
+	if (!header)
+		return;
+
+	// Decode Base64 string from settings to QByteArray state.
+	const std::string state_setting = Host::GetBaseStringSettingValue("GameListTableView", "HeaderState");
+	if (state_setting.empty())
+		return;
+
+	QSignalBlocker blocker(header);
+	header->restoreState(QByteArray::fromBase64(QByteArray::fromStdString(state_setting)));
+}
+
+void GameListWidget::onTableHeaderStateChanged()
+{
+	QHeaderView* header = m_table_view->horizontalHeader();
+	if (!header)
+		return;
+
+	// Encode QByteArray state as Base64 string for storage.
+	Host::SetBaseStringSettingValue("GameListTableView", "HeaderState", header->saveState().toBase64());
+}
+
+void GameListWidget::applyTableHeaderDefaults()
+{
+	QHeaderView* header = m_table_view->horizontalHeader();
+	if (!header)
+		return;
+
+	{
+		QSignalBlocker blocker(header);
+		header->hideSection(GameListModel::Column_FileTitle);
+		header->hideSection(GameListModel::Column_CRC);
+		header->hideSection(GameListModel::Column_Cover);
+		for (int column = 0; column < GameListModel::Column_Count; column++)
+		{
+			if (column == GameListModel::Column_Cover)
+				continue;
+
+			header->resizeSection(column, DEFAULT_COLUMN_WIDTHS[column]);
+		}
+		header->setSortIndicator(DEFAULT_SORT_INDEX, DEFAULT_SORT_ORDER);
+	}
+
+	Host::SetBaseStringSettingValue("GameListTableView", "HeaderState", header->saveState().toBase64());
+}
+
+// TODO (Tech): Create a button for this in the minibar. Currently unused.
+void GameListWidget::resetTableHeaderToDefault()
+{
+	QHeaderView* header = m_table_view->horizontalHeader();
+	if (!header)
+		return;
+
+	{
+		QSignalBlocker blocker(header);
+		for (int column = 0; column < GameListModel::Column_Count; column++)
+		{
+			if (column == GameListModel::Column_Cover)
+				continue;
+
+			// Reset size, position, and visibility.
+			header->resizeSection(column, DEFAULT_COLUMN_WIDTHS[column]);
+			header->moveSection(header->visualIndex(column), column);
+			header->setSectionHidden(column,
+				column == GameListModel::Column_CRC || column == GameListModel::Column_FileTitle);
+		}
+		header->hideSection(GameListModel::Column_Cover);
+		header->setSortIndicator(DEFAULT_SORT_INDEX, DEFAULT_SORT_ORDER);
+	}
+
+	Host::SetBaseStringSettingValue("GameListTableView", "HeaderState", header->saveState().toBase64());
+}
+
+void GameListWidget::saveSortSettings(const int column, const Qt::SortOrder sort_order)
+{
+	Host::SetBaseStringSettingValue("GameListTableView", "SortColumn",
 		GameListModel::getColumnName(static_cast<GameListModel::Column>(column)));
+	Host::SetBaseBoolSettingValue("GameListTableView", "SortDescending", static_cast<bool>(sort_order));
 }
 
-void GameListWidget::loadTableViewColumnVisibilitySettings()
+std::optional<GameList::Entry> GameListWidget::getSelectedEntry() const
 {
-	static constexpr std::array<bool, GameListModel::Column_Count> DEFAULT_VISIBILITY = {{
-		true, // type
-		true, // code
-		true, // title
-		false, // file title
-		false, // crc
-		true, // time played
-		true, // last played
-		true, // size
-		true, // region
-		true // compatibility
-	}};
+	auto lock = GameList::GetLock();
 
-	for (int column = 0; column < GameListModel::Column_Count; column++)
-	{
-		const bool visible = Host::GetBaseBoolSettingValue(
-			"GameListTableView", getColumnVisibilitySettingsKeyName(column).c_str(), DEFAULT_VISIBILITY[column]);
-		m_table_view->setColumnHidden(column, !visible);
-	}
-}
-
-void GameListWidget::saveTableViewColumnVisibilitySettings()
-{
-	for (int column = 0; column < GameListModel::Column_Count; column++)
-	{
-		const bool visible = !m_table_view->isColumnHidden(column);
-		Host::SetBaseBoolSettingValue("GameListTableView", getColumnVisibilitySettingsKeyName(column).c_str(), visible);
-		Host::CommitBaseSettingChanges();
-	}
-}
-
-void GameListWidget::saveTableViewColumnVisibilitySettings(int column)
-{
-	const bool visible = !m_table_view->isColumnHidden(column);
-	Host::SetBaseBoolSettingValue("GameListTableView", getColumnVisibilitySettingsKeyName(column).c_str(), visible);
-	Host::CommitBaseSettingChanges();
-}
-
-void GameListWidget::loadTableViewColumnSortSettings()
-{
-	const GameListModel::Column DEFAULT_SORT_COLUMN = GameListModel::Column_Type;
-	const bool DEFAULT_SORT_DESCENDING = false;
-
-	const GameListModel::Column sort_column =
-		GameListModel::getColumnIdForName(Host::GetBaseStringSettingValue("GameListTableView", "SortColumn"))
-			.value_or(DEFAULT_SORT_COLUMN);
-	const bool sort_descending =
-		Host::GetBaseBoolSettingValue("GameListTableView", "SortDescending", DEFAULT_SORT_DESCENDING);
-	const Qt::SortOrder sort_order = sort_descending ? Qt::DescendingOrder : Qt::AscendingOrder;
-	m_sort_model->sort(sort_column, sort_order);
-	if (QHeaderView* hv = m_table_view->horizontalHeader())
-		hv->setSortIndicator(sort_column, sort_order);
-}
-
-void GameListWidget::saveTableViewColumnSortSettings(const int sort_column, const Qt::SortOrder sort_order)
-{
-	if (sort_column >= 0 && sort_column < GameListModel::Column_Count)
-	{
-		Host::SetBaseStringSettingValue(
-			"GameListTableView", "SortColumn", GameListModel::getColumnName(static_cast<GameListModel::Column>(sort_column)));
-	}
-
-	Host::SetBaseBoolSettingValue("GameListTableView", "SortDescending", sort_order == Qt::DescendingOrder);
-	Host::CommitBaseSettingChanges();
-}
-
-const GameList::Entry* GameListWidget::getSelectedEntry() const
-{
+	const GameList::Entry* entry;
 	if (m_ui.stack->currentIndex() == 0)
 	{
 		const QItemSelectionModel* selection_model = m_table_view->selectionModel();
 		if (!selection_model->hasSelection())
-			return nullptr;
+			return std::nullopt;
 
 		const QModelIndexList selected_rows = selection_model->selectedRows();
 		if (selected_rows.empty())
-			return nullptr;
+			return std::nullopt;
 
 		const QModelIndex source_index = m_sort_model->mapToSource(selected_rows[0]);
 		if (!source_index.isValid())
-			return nullptr;
+			return std::nullopt;
 
-		return GameList::GetEntryByIndex(source_index.row());
+		entry = GameList::GetEntryByIndex(source_index.row());
 	}
 	else
 	{
 		const QItemSelectionModel* selection_model = m_list_view->selectionModel();
 		if (!selection_model->hasSelection())
-			return nullptr;
+			return std::nullopt;
 
 		const QModelIndex source_index = m_sort_model->mapToSource(selection_model->currentIndex());
 		if (!source_index.isValid())
-			return nullptr;
+			return std::nullopt;
 
-		return GameList::GetEntryByIndex(source_index.row());
+		entry = GameList::GetEntryByIndex(source_index.row());
 	}
+
+	if (!entry)
+		return std::nullopt;
+
+	// Copy the entry here instead of keeping the lock held to avoid deadlocks.
+	return *entry;
 }
 
 void GameListWidget::rescanFile(const std::string& path)

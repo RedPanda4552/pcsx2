@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #pragma once
@@ -8,7 +8,6 @@
 #include "GS/GS.h"
 #include "GS/Renderers/Common/GSFastList.h"
 #include "GS/Renderers/Common/GSTexture.h"
-#include "GS/Renderers/Vulkan/GSTextureVK.h"
 #include "GS/Renderers/Common/GSVertex.h"
 #include "GS/GSAlignedClass.h"
 #include "GS/GSExtra.h"
@@ -68,6 +67,27 @@ enum class ShaderInterlace
 	MAD_RECONSTRUCT = 4,
 	Count
 };
+
+static inline bool HasVariableWriteMask(ShaderConvert shader)
+{
+	switch (shader)
+	{
+		case ShaderConvert::COPY:
+		case ShaderConvert::RTA_CORRECTION:
+			return true;
+		default:
+			return false;
+	}
+}
+
+static inline int GetShaderIndexForMask(ShaderConvert shader, int mask)
+{
+	pxAssert(HasVariableWriteMask(shader));
+	int index = mask;
+	if (shader == ShaderConvert::RTA_CORRECTION)
+		index |= 1 << 4;
+	return index;
+}
 
 static inline bool HasDepthOutput(ShaderConvert shader)
 {
@@ -381,6 +401,7 @@ struct alignas(16) GSHWDrawConfig
 
 				// Depth clamp
 				u32 zclamp : 1;
+				u32 zfloor : 1;
 
 				// Hack
 				u32 tcoffsethack : 1;
@@ -412,7 +433,7 @@ struct alignas(16) GSHWDrawConfig
 		{
 			const u32 sw_blend_bits = blend_a | blend_b | blend_d;
 			const bool sw_blend_needs_rt = (sw_blend_bits != 0 && ((sw_blend_bits | blend_c) & 1u)) || ((a_masked & blend_c) != 0);
-			return channel_fb || tex_is_fb || fbmask || (date > 0 && date != 3) || sw_blend_needs_rt;
+			return channel_fb || tex_is_fb || fbmask || (date >= 5) || sw_blend_needs_rt;
 		}
 
 		/// Disables color output from the pixel shader, this is done when all channels are masked.
@@ -549,6 +570,7 @@ struct alignas(16) GSHWDrawConfig
 		constexpr ColorMaskSelector(): key(0xF) {}
 		constexpr ColorMaskSelector(u8 c): key(0) { wrgba = c; }
 	};
+
 #pragma pack(pop)
 	struct alignas(16) VSConstantBuffer
 	{
@@ -560,11 +582,11 @@ struct alignas(16) GSHWDrawConfig
 		GSVector2i max_depth;
 		__fi VSConstantBuffer()
 		{
-			memset(this, 0, sizeof(*this));
+			memset(static_cast<void*>(this), 0, sizeof(*this));
 		}
 		__fi VSConstantBuffer(const VSConstantBuffer& other)
 		{
-			memcpy(this, &other, sizeof(*this));
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&other), sizeof(*this));
 		}
 		__fi VSConstantBuffer& operator=(const VSConstantBuffer& other)
 		{
@@ -584,7 +606,7 @@ struct alignas(16) GSHWDrawConfig
 			if (*this == other)
 				return false;
 
-			memcpy(this, &other, sizeof(*this));
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&other), sizeof(*this));
 			return true;
 		}
 	};
@@ -600,6 +622,7 @@ struct alignas(16) GSHWDrawConfig
 		GSVector4 LODParams;
 		GSVector4 STRange;
 		GSVector4i ChannelShuffle;
+		GSVector2 ChannelShuffleOffset;
 		GSVector2 TCOffsetHack;
 		GSVector2 STScale;
 
@@ -609,11 +632,11 @@ struct alignas(16) GSHWDrawConfig
 
 		__fi PSConstantBuffer()
 		{
-			memset(this, 0, sizeof(*this));
+			memset(static_cast<void*>(this), 0, sizeof(*this));
 		}
 		__fi PSConstantBuffer(const PSConstantBuffer& other)
 		{
-			memcpy(this, &other, sizeof(*this));
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&other), sizeof(*this));
 		}
 		__fi PSConstantBuffer& operator=(const PSConstantBuffer& other)
 		{
@@ -633,7 +656,7 @@ struct alignas(16) GSHWDrawConfig
 			if (*this == other)
 				return false;
 
-			memcpy(this, &other, sizeof(*this));
+			memcpy(static_cast<void*>(this), static_cast<const void*>(&other), sizeof(*this));
 			return true;
 		}
 	};
@@ -741,9 +764,10 @@ struct alignas(16) GSHWDrawConfig
 	struct BlendMultiPass
 	{
 		BlendState blend;
-		u8 blend_hw; /*HWBlendType*/
-		u8 dither;
-		bool enable;
+		bool enable : 1;
+		u8 no_color1 : 1;
+		u8 blend_hw : 3; // HWBlendType
+		u8 dither : 2;
 	};
 	static_assert(sizeof(BlendMultiPass) == 8, "blend multi pass is 8 bytes");
 
@@ -922,6 +946,12 @@ protected:
 	/// Perform texture operations for ImGui
 	void UpdateImGuiTextures();
 
+protected:
+	// Entry point to the renderer-specific StretchRect code.
+	virtual void DoStretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect,
+		GSHWDrawConfig::ColorMaskSelector cms, ShaderConvert shader, bool linear) = 0;
+	void DoStretchRectWithAssertions(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, GSHWDrawConfig::ColorMaskSelector cms, ShaderConvert shader, bool linear);
+
 public:
 	GSDevice();
 	virtual ~GSDevice();
@@ -991,7 +1021,7 @@ public:
 	virtual bool UpdateWindow() = 0;
 
 	/// Call when the window size changes externally to recreate any resources.
-	virtual void ResizeWindow(s32 new_window_width, s32 new_window_height, float new_window_scale) = 0;
+	virtual void ResizeWindow(u32 new_window_width, u32 new_window_height, float new_window_scale) = 0;
 
 	/// Returns true if exclusive fullscreen is supported.
 	virtual bool SupportsExclusiveFullscreen() const = 0;
@@ -1037,9 +1067,9 @@ public:
 	virtual std::unique_ptr<GSDownloadTexture> CreateDownloadTexture(u32 width, u32 height, GSTexture::Format format) = 0;
 
 	virtual void CopyRect(GSTexture* sTex, GSTexture* dTex, const GSVector4i& r, u32 destX, u32 destY) = 0;
-	virtual void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, ShaderConvert shader = ShaderConvert::COPY, bool linear = true) = 0;
-	virtual void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, bool red, bool green, bool blue, bool alpha, ShaderConvert shader = ShaderConvert::COPY) = 0;
 
+	void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, bool red, bool green, bool blue, bool alpha, ShaderConvert shader = ShaderConvert::COPY);
+	void StretchRect(GSTexture* sTex, const GSVector4& sRect, GSTexture* dTex, const GSVector4& dRect, ShaderConvert shader = ShaderConvert::COPY, bool linear = true);
 	void StretchRect(GSTexture* sTex, GSTexture* dTex, const GSVector4& dRect, ShaderConvert shader = ShaderConvert::COPY, bool linear = true);
 
 	/// Performs a screen blit for display. If dTex is null, it assumes you are writing to the system framebuffer/swap chain.

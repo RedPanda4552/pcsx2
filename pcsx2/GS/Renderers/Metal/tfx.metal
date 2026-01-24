@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GSMTLShaderCommon.h"
@@ -61,6 +61,7 @@ constant uint PS_CHANNEL            [[function_constant(GSMTLConstantIndex_PS_CH
 constant uint PS_DITHER             [[function_constant(GSMTLConstantIndex_PS_DITHER)]];
 constant uint PS_DITHER_ADJUST      [[function_constant(GSMTLConstantIndex_PS_DITHER_ADJUST)]];
 constant bool PS_ZCLAMP             [[function_constant(GSMTLConstantIndex_PS_ZCLAMP)]];
+constant bool PS_ZFLOOR             [[function_constant(GSMTLConstantIndex_PS_ZFLOOR)]];
 constant bool PS_TCOFFSETHACK       [[function_constant(GSMTLConstantIndex_PS_TCOFFSETHACK)]];
 constant bool PS_URBAN_CHAOS_HLE    [[function_constant(GSMTLConstantIndex_PS_URBAN_CHAOS_HLE)]];
 constant bool PS_TALES_OF_ABYSS_HLE [[function_constant(GSMTLConstantIndex_PS_TALES_OF_ABYSS_HLE)]];
@@ -102,6 +103,7 @@ constant bool NEEDS_RT = NEEDS_RT_FOR_AFAIL || NEEDS_RT_EARLY || (!PS_PRIM_CHECK
 
 constant bool PS_COLOR0 = !PS_NO_COLOR;
 constant bool PS_COLOR1 = !PS_NO_COLOR1;
+constant bool PS_ZOUTPUT = PS_ZCLAMP || PS_ZFLOOR;
 
 struct MainVSIn
 {
@@ -137,7 +139,7 @@ struct MainPSOut
 {
 	float4 c0 [[color(0), index(0), function_constant(PS_COLOR0)]];
 	float4 c1 [[color(0), index(1), function_constant(PS_COLOR1)]];
-	float depth [[depth(less), function_constant(PS_ZCLAMP)]];
+	float depth [[depth(less), function_constant(PS_ZOUTPUT)]];
 };
 
 // MARK: - Vertex functions
@@ -507,7 +509,7 @@ struct PSMain
 
 	uint fetch_raw_depth()
 	{
-		return tex_depth.read(ushort2(in.p.xy)) * 0x1p32f;
+		return tex_depth.read(ushort2(in.p.xy + cb.channel_shuffle_offset)) * 0x1p32f;
 	}
 
 	float4 fetch_raw_color()
@@ -515,7 +517,7 @@ struct PSMain
 		if (PS_TEX_IS_FB)
 			return current_color;
 		else
-			return tex.read(ushort2(in.p.xy));
+			return tex.read(ushort2(in.p.xy + cb.channel_shuffle_offset));
 	}
 
 	float4 fetch_c(ushort2 uv)
@@ -788,7 +790,7 @@ struct PSMain
 	void fog(thread float4& C, float f)
 	{
 		if (PS_FOG)
-			C.rgb = trunc(mix(cb.fog_color, C.rgb, f));
+			C.rgb = trunc(mix(cb.fog_color, C.rgb, (f * 255.0f) / 256.0f));
 	}
 
 	float4 ps_color()
@@ -1209,8 +1211,13 @@ struct PSMain
 		}
 		if (PS_COLOR1)
 			out.c1 = alpha_blend;
+		
+		float depth_value = PS_ZFLOOR ? (floor(in.p.z * exp2(32.0f)) * exp2(-32.0f)) : in.p.z;
+		
 		if (PS_ZCLAMP)
-			out.depth = min(in.p.z, cb.max_depth);
+			out.depth = min(depth_value, cb.max_depth);
+		else if (PS_ZFLOOR)
+			out.depth = depth_value;
 
 		return out;
 	}

@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2002-2025 PCSX2 Dev Team
+// SPDX-FileCopyrightText: 2002-2026 PCSX2 Dev Team
 // SPDX-License-Identifier: GPL-3.0+
 
 #include "GS.h"
@@ -6,7 +6,7 @@
 #include "MTGS.h"
 #include "MTVU.h"
 #include "Host.h"
-#include "IconsFontAwesome6.h"
+#include "IconsFontAwesome.h"
 #include "VMManager.h"
 
 #include "common/FPControl.h"
@@ -946,7 +946,7 @@ void MTGS::ApplySettings()
 		WaitGS(false, false, false);
 }
 
-void MTGS::ResizeDisplayWindow(int width, int height, float scale)
+void MTGS::ResizeDisplayWindow(u32 width, u32 height, float scale)
 {
 	pxAssertRel(IsOpen(), "MTGS is running");
 	RunOnGSThread([width, height, scale]() {
