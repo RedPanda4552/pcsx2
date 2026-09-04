@@ -27,8 +27,11 @@ namespace Memcard
 	static std::array<std::unique_ptr<MemcardBase>, Memcard::MAX_SLOTS> s_memcards;
 } // namespace Memcard
 
-bool Memcard::Initialize()
+bool Memcard::Initialize(std::vector<std::string> filters)
 {
+	Memcard::filters = filters;
+	
+	// Now insert the memcards.
 	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
 	{
 		Memcard::InsertMemcard(i);

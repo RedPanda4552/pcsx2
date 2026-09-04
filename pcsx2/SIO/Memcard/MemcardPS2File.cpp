@@ -32,7 +32,13 @@ MemcardPS2File::MemcardPS2File(u32 unifiedSlot, std::string path)
 	this->eraseBlockCount = static_cast<EraseBlockCount>(this->absoluteSize / ERASE_BLOCK_LENGTH);
 }
 
-MemcardPS2File::~MemcardPS2File() = default;
+MemcardPS2File::~MemcardPS2File()
+{
+	if (this->filePtr)
+	{
+		std::fclose(this->filePtr);
+	}
+}
 
 s64 MemcardPS2File::GetSize()
 {
