@@ -18,6 +18,9 @@ namespace Memcard
 	// .mcd - PS1 - Modern file extension (raw format)
 	// .mcr - PS1 - Legacy file extension (raw format)
 	constexpr std::array<std::string, 2> PS1_MEMCARD_FILE_EXTENSIONS = { ".mcd", ".mcr" };
+	
+	// Filters are universal to all (folder) memcards, store them at top level.
+	std::vector<std::string> filters;
 
 	enum class Type
 	{
@@ -70,13 +73,11 @@ namespace Memcard
 		AUTH_F7 = 0xf7
 	};
 
-	
-	
 	static constexpr u32 MAX_SLOTS = 8;
 	// First byte of any memory card command, PS1 or PS2.
 	static constexpr u8 COMMAND_START = 0x81;
 	
-	bool Initialize();
+	bool Initialize(std::vector<std::string> filters);
 	void Shutdown();
 
 	bool CreateMemcard(const u32 unifiedSlot);
