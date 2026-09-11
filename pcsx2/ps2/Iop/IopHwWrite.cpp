@@ -17,6 +17,12 @@
 #include "ps2/pgif.h"
 #include "Mdec.h"
 
+#define SIO0LOG_ENABLE 0
+#define SIO2LOG_ENABLE 0
+
+#define Sio0Log if (SIO0LOG_ENABLE) DevCon
+#define Sio2Log if (SIO2LOG_ENABLE) DevCon
+
 namespace IopMemory {
 
 using namespace Internal;
