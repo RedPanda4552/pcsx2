@@ -40,6 +40,7 @@ public:
 	// does not accidentally use dmaBlockSize.
 	size_t dmaBlockSize = 0;
 	bool queueComplete = false;
+	size_t readCounter = 0;
 
 	Sio2();
 	~Sio2();
@@ -60,6 +61,7 @@ public:
 	void Multitap();
 	void Infrared();
 	void Memcard();
+	void InvalidDevice();
 
 	void Write(u8 data);
 	u8 Read();

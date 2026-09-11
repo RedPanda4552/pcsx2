@@ -16,12 +16,6 @@
 #include "ps2/pgif.h"
 #include "Mdec.h"
 
-#define SIO0LOG_ENABLE 0
-#define SIO2LOG_ENABLE 0
-
-#define Sio0Log if (SIO0LOG_ENABLE) DevCon
-#define Sio2Log if (SIO2LOG_ENABLE) DevCon
-
 namespace IopMemory
 {
 using namespace Internal;
@@ -42,16 +36,16 @@ mem8_t iopHwRead8_Page1( u32 addr )
 			ret = g_Sio0.GetRxData();
 			break;
 		case (HW_SIO_STAT & 0x0fff):
-			Sio0Log.Error("%s(%08X) Unexpected SIO0 STAT 8 bit read", __FUNCTION__, addr);
+			DevCon.Error("%s(%08X) Unexpected SIO0 STAT 8 bit read", __FUNCTION__, addr);
 			break;
 		case (HW_SIO_MODE & 0x0fff):
-			Sio0Log.Error("%s(%08X) Unexpected SIO0 MODE 8 bit read", __FUNCTION__, addr);
+			DevCon.Error("%s(%08X) Unexpected SIO0 MODE 8 bit read", __FUNCTION__, addr);
 			break;
 		case (HW_SIO_CTRL & 0x0fff):
-			Sio0Log.Error("%s(%08X) Unexpected SIO0 CTRL 8 bit read", __FUNCTION__, addr);
+			DevCon.Error("%s(%08X) Unexpected SIO0 CTRL 8 bit read", __FUNCTION__, addr);
 			break;
 		case (HW_SIO_BAUD & 0x0fff):
-			Sio0Log.Error("%s(%08X) Unexpected SIO0 BAUD 8 bit read", __FUNCTION__, addr);
+			DevCon.Error("%s(%08X) Unexpected SIO0 BAUD 8 bit read", __FUNCTION__, addr);
 			break;
 
 		// for use of serial port ignore for now
@@ -441,15 +435,14 @@ mem32_t iopHwRead32_Page8( u32 addr )
 			{
 				case (HW_SIO2_TX & 0x0fff):
 					ret = psxHu32(addr);
-					Sio2Log.Warning("%s(%08X) Unexpected 32 bit read of HW_SIO2_DATAIN (%08X)", __FUNCTION__, addr, ret);
+					DevCon.Error("%s(%08X) Unexpected 32 bit read of HW_SIO2_DATAIN (%08X)", __FUNCTION__, addr, ret);
 					break;
 				case (HW_SIO2_RX & 0x0fff):
 					ret = psxHu32(addr);
-					Sio2Log.Warning("%s(%08X) Unexpected 32 bit read of HW_SIO2_FIFO (%08X)", __FUNCTION__, addr, ret);
+					DevCon.Error("%s(%08X) Unexpected 32 bit read of HW_SIO2_FIFO (%08X)", __FUNCTION__, addr, ret);
 					break;
 				case (HW_SIO2_CTRL & 0x0fff):
 					ret = g_Sio2.ctrl;
-					Sio2Log.WriteLn("%s(%08X) SIO2 CTRL Read (%08X)", __FUNCTION__, addr, ret);
 					break;
 				case (HW_SIO2_CMD_STAT & 0xfff):
 					ret = g_Sio2.CmdStat;
@@ -473,7 +466,6 @@ mem32_t iopHwRead32_Page8( u32 addr )
 					break;
 				case (HW_SIO2_INTR & 0x0fff):
 					ret = g_Sio2.iStat;
-					Sio2Log.WriteLn("%s(%08X) SIO2 ISTAT Read (%08X)", __FUNCTION__, addr, ret);
 					break;
 				default:
 					ret = psxHu32(addr);

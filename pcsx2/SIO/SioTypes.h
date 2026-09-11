@@ -17,7 +17,20 @@ namespace SioMode
 	static constexpr u8 MULTITAP = 0x21;
 	static constexpr u8 INFRARED = 0x61;
 	static constexpr u8 MEMCARD = 0x81;
-} // namespace SioMode
+}
+
+namespace Sio
+{
+	enum class CommandType : u8
+	{
+		NOT_SET = 0x00,
+		PAD = 0x01,
+		MULTITAP = 0x21,
+		INFRARED = 0x61,
+		MEMCARD = 0x81
+	};
+} // namespace Sio
+
 
 /*
 namespace PadCommand
@@ -77,6 +90,7 @@ namespace SIO
 {
 	static constexpr u8 PORTS = 2;
 	static constexpr u8 SLOTS = 4;
+	static constexpr u8 MAX_SLOTS = 8;
 } // namespace SIO
 
 namespace SIO0_STAT
@@ -107,7 +121,7 @@ namespace Sio2Cmd
 {
 	static constexpr u32 PORT = 0x01;
 	static constexpr u16 COMMAND_LENGTH_MASK = 0x3ff;
-} // namespace Send3
+} // namespace Sio2Cmd
 
 namespace Sio2Ctrl
 {

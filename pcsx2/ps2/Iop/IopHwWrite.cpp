@@ -17,12 +17,6 @@
 #include "ps2/pgif.h"
 #include "Mdec.h"
 
-#define SIO0LOG_ENABLE 0
-#define SIO2LOG_ENABLE 0
-
-#define Sio0Log if (SIO0LOG_ENABLE) DevCon
-#define Sio2Log if (SIO2LOG_ENABLE) DevCon
-
 namespace IopMemory {
 
 using namespace Internal;
@@ -77,16 +71,16 @@ void iopHwWrite8_Page1( u32 addr, mem8_t val )
 			g_Sio0.SetTxData(val);
 			break;
 		case (HW_SIO_STAT & 0x0fff):
-			Sio0Log.Error("%s(%08X, %08X) Unexpected SIO0 STAT 8 bit write", __FUNCTION__, addr, val);
+			DevCon.Error("%s(%08X, %08X) Unexpected SIO0 STAT 8 bit write", __FUNCTION__, addr, val);
 			break;
 		case (HW_SIO_MODE & 0x0fff):
-			Sio0Log.Error("%s(%08X, %08X) Unexpected SIO0 MODE 8 bit write", __FUNCTION__, addr, val);
+			DevCon.Error("%s(%08X, %08X) Unexpected SIO0 MODE 8 bit write", __FUNCTION__, addr, val);
 			break;
 		case (HW_SIO_CTRL & 0x0fff):
-			Sio0Log.Error("%s(%08X, %08X) Unexpected SIO0 CTRL 8 bit write", __FUNCTION__, addr, val);
+			DevCon.Error("%s(%08X, %08X) Unexpected SIO0 CTRL 8 bit write", __FUNCTION__, addr, val);
 			break;
 		case (HW_SIO_BAUD & 0x0fff):
-			Sio0Log.Error("%s(%08X, %08X) Unexpected SIO0 BAUD 8 bit write", __FUNCTION__, addr, val);
+			DevCon.Error("%s(%08X, %08X) Unexpected SIO0 BAUD 8 bit write", __FUNCTION__, addr, val);
 			break;
 		// for use of serial port ignore for now
 		//case 0x50: serial_write8( val ); break;
@@ -628,7 +622,6 @@ void iopHwWrite32_Page8( u32 addr, mem32_t val )
 					Sio2Log.Warning("%s(%08X, %08X) Unexpected 32 bit write to HW_SIO2_FIFO", __FUNCTION__, addr, val);
 					break;
 				case (HW_SIO2_CTRL & 0x0fff):
-					Sio2Log.WriteLn("%s(%08X, %08X) SIO2 CTRL Write", __FUNCTION__, addr, val);
 					g_Sio2.SetCtrl(val);
 					break;
 				case (HW_SIO2_CMD_STAT & 0x0fff):
