@@ -10,7 +10,7 @@
 #include "Counters.h"
 #include "Host.h"
 #include "fmt/core.h"
-#include "IconsFontAwesome6.h"
+#include "IconsPromptFont.h"
 
 // Number of frames a memory card should be considered busy for after doing a write operation.
 constexpr u32 MEMCARD_BUSY_TICKS = 300;
@@ -51,7 +51,7 @@ void MemcardBase::SendWriteMessageToHost()
 			fmt::format(
 				"MemoryCardWrite{}",
 				this->GetUnifiedSlot()),
-			ICON_FA_SD_CARD,
+			ICON_PF_MEMORY_CARD,
 			fmt::format(
 				TRANSLATE_FS("MemoryCard", "Writing to Memory Card '{}'..."),
 				Path::GetFileName(this->GetPath())),
@@ -75,7 +75,7 @@ void MemcardBase::SendReadMessageToHost()
 			fmt::format(
 				"MemoryCardRead{}",
 				this->GetUnifiedSlot()),
-			ICON_FA_SD_CARD,
+			ICON_PF_MEMORY_CARD,
 			fmt::format(
 				TRANSLATE_FS("MemoryCard", "Reading from Memory Card '{}'..."),
 				Path::GetFileName(this->GetPath())),

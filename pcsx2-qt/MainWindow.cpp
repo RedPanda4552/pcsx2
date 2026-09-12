@@ -42,7 +42,7 @@
 #include "pcsx2/Recording/InputRecording.h"
 #include "pcsx2/Recording/InputRecordingControls.h"
 #include "pcsx2/SaveState.h"
-#include "pcsx2/SIO/Sio.h"
+#include "pcsx2/SIO/Memcard/Memcard.h"
 #include "pcsx2/GS/GSExtra.h"
 
 #include "common/Assertions.h"
@@ -1458,7 +1458,7 @@ bool MainWindow::shouldMouseLock() const
 
 bool MainWindow::shouldAbortForMemcardBusy(const VMLock& lock)
 {
-	if (MemcardBusy::IsBusy() && !GSDumpReplayer::IsReplayingDump())
+	if (Memcard::IsBusy() && !GSDumpReplayer::IsReplayingDump())
 	{
 		QMessageBox msgbox(lock.getDialogParent());
 		msgbox.setIcon(QMessageBox::Warning);

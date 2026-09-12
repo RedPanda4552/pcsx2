@@ -626,7 +626,7 @@ void FileMcd_EmuClose()
 
 void FileMcd_CancelEject()
 {
-	AutoEject::ClearAll();
+	//AutoEject::ClearAll();
 }
 
 void FileMcd_Reopen(std::string new_serial)
@@ -655,12 +655,13 @@ static bool FileMcd_IsAutoEjecting()
 
 void FileMcd_Swap()
 {
+	/*
 	if (MemcardBusy::IsBusy())
 	{
 		Host::AddIconOSDMessage("MemoryCardSwap_Busy", ICON_PF_MEMORY_CARD, TRANSLATE_SV("MemoryCardSwap_Busy", "Memory cards are busy. Can't swap right now."));
 		return;
 	}
-
+*/
 	// Check if auto-eject is active
 	if (FileMcd_IsAutoEjecting())
 	{
@@ -693,7 +694,7 @@ void FileMcd_Swap()
 	FileMcd_EmuClose();
 	FileMcd_SetType();
 	FileMcd_EmuOpen();
-	AutoEject::SetAll();
+	//AutoEject::SetAll();
 	Host::AddIconOSDMessage("MemoryCardSwap", ICON_PF_MEMORY_CARD, fmt::format(TRANSLATE_FS("MemoryCardSwap", "Memory Cards have been swapped.\nSlot 1: {}\nSlot 2: {}"), EmuConfig.Mcd[0].Filename, EmuConfig.Mcd[1].Filename), Host::OSD_INFO_DURATION);
 }
 

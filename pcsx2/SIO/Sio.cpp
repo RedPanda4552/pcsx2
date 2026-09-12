@@ -27,7 +27,7 @@ void sioSetGameSerial( const std::string& serial ) {
 	for ( uint port = 0; port < 2; ++port ) {
 		for ( uint slot = 0; slot < 4; ++slot ) {
 			if ( mcds[port][slot].ReIndex( serial ) ) {
-				AutoEject::Set( port, slot );
+				//AutoEject::Set( port, slot );
 			}
 		}
 	}
@@ -63,6 +63,7 @@ bool sioPortAndSlotIsMultitap(u32 port, u32 slot)
 	return (slot != 0);
 }
 
+/*
 void AutoEject::CountDownTicks()
 {
 	bool reinserted = false;
@@ -84,6 +85,7 @@ void AutoEject::CountDownTicks()
 			TRANSLATE_SV("MemoryCard", "Memory Cards reinserted."), Host::OSD_INFO_DURATION);
 	}
 }
+*/
 
 u32 SIO::ConvertToUnifiedSlot(const u32 port, const u32 slot)
 {

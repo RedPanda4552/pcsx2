@@ -507,9 +507,9 @@ static __fi void VSyncStart(u64 sCycle)
 	EECNT_LOG("    ================  EE COUNTER VSYNC START (frame: %d)  ================", g_FrameCount);
 
 	// Memcard auto ejection - Uses a tick system timed off of real time, decrementing one tick per frame.
-	AutoEject::CountDownTicks();
+	//AutoEject::CountDownTicks();
 	// Memcard IO detection - Uses a tick system to determine when memcards are no longer being written.
-	MemcardBusy::Decrement();
+	//MemcardBusy::Decrement();
 
 	if (!GSSMODE1reg.SINT)
 	{

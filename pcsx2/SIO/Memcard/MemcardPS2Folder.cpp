@@ -74,7 +74,7 @@ void DirectoryEntry::AddChild(std::unique_ptr<DirectoryEntry>)
 
 void MemcardPS2Folder::RebuildIndex()
 {
-    for (std::string filter : Memcard::filters)
+    for (std::string filter : Memcard::GetFilters())
     {
         this->AddFolderFromRoot(filter);
     }

@@ -25,6 +25,9 @@
 namespace Memcard
 {
 	static std::array<std::unique_ptr<MemcardBase>, Memcard::MAX_SLOTS> s_memcards;
+
+	// Filters are universal to all (folder) memcards, store them at top level.
+	static std::vector<std::string> filters;
 } // namespace Memcard
 
 bool Memcard::Initialize(std::vector<std::string> filters)
@@ -357,6 +360,16 @@ bool Memcard::IsBusy()
 	}
 
 	return false;
+}
+
+const std::vector<std::string>& Memcard::GetFilters()
+{
+	return Memcard::filters;
+}
+
+void Memcard::SetFilters(const std::vector<std::string> newFilters)
+{
+	Memcard::filters = newFilters;
 }
 
 void Memcard::Freeze()

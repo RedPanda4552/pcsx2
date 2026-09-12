@@ -33,9 +33,8 @@
 #include "common/StringUtil.h"
 #include "common/Threading.h"
 
-#include "SIO/Memcard/MemoryCardFile.h"
 #include "SIO/Pad/Pad.h"
-#include "SIO/Sio.h"
+#include "SIO/Memcard/Memcard.h"
 
 #include "IconsFontAwesome.h"
 #include "IconsPromptFont.h"
@@ -1033,7 +1032,7 @@ void FullscreenUI::DoToggleFullscreen()
 
 void FullscreenUI::ConfirmShutdownIfMemcardBusy(std::function<void(bool)> callback)
 {
-	if (!MemcardBusy::IsBusy())
+	if (!Memcard::IsBusy())
 	{
 		callback(true);
 		return;

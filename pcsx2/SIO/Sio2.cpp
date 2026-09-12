@@ -292,7 +292,7 @@ void Sio2::Memcard()
 	this->CmdStat |= CmdStat::NO_DEVICES_MISSING;
 
 	// If the currently accessed memcard is missing, also tick those bits
-	if (memcard->GetType() == Memcard::Type::NOT_CONNECTED || memcard->GetAutoEjectTicks())
+	if (memcard->GetType() == Memcard::Type::NOT_CONNECTED)
 	{
 		if (!port)
 		{
@@ -302,18 +302,6 @@ void Sio2::Memcard()
 		{
 			this->CmdStat |= CmdStat::PORT_2_MISSING;
 		}
-	}
-
-	// Check if auto ejection is active. If so, zero out the fifo to simulate dead air over the wire.
-	if (memcard->GetAutoEjectTicks())
-	{
-		while (!g_Sio2FifoIn.empty())
-		{
-			g_Sio2FifoIn.pop_front();
-			g_Sio2FifoOut.push_back(0xFF);
-		}
-
-		return;
 	}
 
 	memcard->ExecuteCommand();
@@ -500,7 +488,7 @@ bool Sio2::DoState(StateWrapper& sw)
 			{
 				if (mcdCrcs[port][slot] != mcds[port][slot].GetChecksum())
 				{
-					AutoEject::SetAll();
+					//AutoEject::SetAll();
 					ejected = true;
 					break;
 				}
@@ -508,6 +496,6 @@ bool Sio2::DoState(StateWrapper& sw)
 		}
 	}
 
-	sw.Do(&sioLastFrameMcdBusy);
+	//sw.Do(&sioLastFrameMcdBusy);
 	return sw.IsGood();
 }

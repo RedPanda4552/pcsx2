@@ -18,9 +18,6 @@ namespace Memcard
 	// .mcd - PS1 - Modern file extension (raw format)
 	// .mcr - PS1 - Legacy file extension (raw format)
 	constexpr std::array<std::string, 2> PS1_MEMCARD_FILE_EXTENSIONS = { ".mcd", ".mcr" };
-	
-	// Filters are universal to all (folder) memcards, store them at top level.
-	std::vector<std::string> filters;
 
 	enum class Type
 	{
@@ -92,6 +89,8 @@ namespace Memcard
 	Memcard::Type GetMemcardType(std::string fullPath);
 	std::vector<Memcard::AvailableMemcardSummary> GetAvailableMemcards(bool includeInUse);
 	bool IsBusy();
+	const std::vector<std::string>& GetFilters();
+	void SetFilters(const std::vector<std::string> newFilters);
 
 	void Freeze();
 } // namespace Memcard

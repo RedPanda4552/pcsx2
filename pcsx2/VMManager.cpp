@@ -888,13 +888,15 @@ void VMManager::Internal::UpdateEmuFolders()
 		if (EmuFolders::MemoryCards != old_memcards_directory)
 		{
 			std::string memcardFilters = "";
+			std::vector<std::string> memcardFiltersList;
 			if (const GameDatabaseSchema::GameEntry* game = GameDatabase::findGame(s_disc_serial))
 			{
 				memcardFilters = game->memcardFiltersAsString();
+				memcardFiltersList = game->memcardFilters;
 			}
 
 			if (!GSDumpReplayer::IsReplayingDump())
-				Memcard::Initialize();
+				Memcard::Initialize(memcardFiltersList);
 		}
 
 		if (EmuFolders::Textures != old_textures_directory)
@@ -1568,10 +1570,10 @@ VMBootResult VMManager::Initialize(const VMBootParameters& boot_params, Error* e
 	ScopedGuard close_pad = &Pad::Shutdown;
 
 	Console.WriteLn("Initializing Memcard...");
-	if (!Memcard::Initialize())
+	if (!Memcard::Initialize({}))
 	{
 		Host::ReportErrorAsync("Startup Error", "Failed to initialize Memcard");
-		return false;
+		return VMBootResult::StartupFailure;
 	}
 	ScopedGuard close_memcard = &Memcard::Shutdown;
 
@@ -1765,7 +1767,7 @@ void VMManager::Shutdown(bool save_resume_state)
 
 bool VMManager::RequestReset()
 {
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("RequestReset", ICON_FA_TRIANGLE_EXCLAMATION,
 			TRANSLATE_STR("VMManager",
@@ -1979,7 +1981,7 @@ void VMManager::DoSaveState(const char* filename, s32 slot_for_message, bool zip
 	}
 
 	Host::OnSaveStateSaved(filename);
-	MemcardBusy::CheckSaveStateDependency();
+	//MemcardBusy::CheckSaveStateDependency();
 	return;
 }
 
@@ -3086,7 +3088,7 @@ void VMManager::CheckForMemoryCardConfigChanges(const Pcsx2Config& old_config)
 				EmuConfig.Mcd[index].Filename != old_config.Mcd[index].Filename)
 			{
 				Console.WriteLn("Ejecting memory card %u (port %u slot %u) due to source change", index, port, slot);
-				AutoEject::Set(port, slot);
+				//AutoEject::Set(port, slot);
 			}
 		}
 	}
