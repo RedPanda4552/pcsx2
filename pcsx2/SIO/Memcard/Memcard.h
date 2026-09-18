@@ -45,7 +45,7 @@ namespace Memcard
 		Memcard::HostType hostType;
 		s64 size;
 		bool formatted;
-	};#include "StateWrapper.h"
+	};
 
 	enum class Command : u8
 	{
