@@ -3,9 +3,10 @@
 
 #include "SIO/Memcard/MemoryCardFile.h"
 
-#include "SIO/Memcard/MemoryCardFolder.h"
 #include "SIO/Sio.h"
-#include <SIO/SioTypes.h>
+#include "SIO/SioTypes.h"
+#include "SIO/Memcard/Memcard.h"
+#include "SIO/Memcard/MemoryCardFolder.h"
 
 #include "common/Assertions.h"
 #include "common/Console.h"
@@ -655,13 +656,12 @@ static bool FileMcd_IsAutoEjecting()
 
 void FileMcd_Swap()
 {
-	/*
-	if (MemcardBusy::IsBusy())
+	if (Memcard::IsBusy())
 	{
 		Host::AddIconOSDMessage("MemoryCardSwap_Busy", ICON_PF_MEMORY_CARD, TRANSLATE_SV("MemoryCardSwap_Busy", "Memory cards are busy. Can't swap right now."));
 		return;
 	}
-*/
+
 	// Check if auto-eject is active
 	if (FileMcd_IsAutoEjecting())
 	{

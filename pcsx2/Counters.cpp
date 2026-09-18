@@ -14,6 +14,7 @@
 #include "MTGS.h"
 #include "PerformanceMetrics.h"
 #include "Patch.h"
+#include "SIO/Memcard/Memcard.h"
 #include "ps2/HwInternal.h"
 #include "SIO/Sio.h"
 #include "SPU2/spu2.h"
@@ -506,10 +507,8 @@ static __fi void VSyncStart(u64 sCycle)
 
 	EECNT_LOG("    ================  EE COUNTER VSYNC START (frame: %d)  ================", g_FrameCount);
 
-	// Memcard auto ejection - Uses a tick system timed off of real time, decrementing one tick per frame.
-	//AutoEject::CountDownTicks();
 	// Memcard IO detection - Uses a tick system to determine when memcards are no longer being written.
-	//MemcardBusy::Decrement();
+	Memcard::TickBusy();
 
 	if (!GSSMODE1reg.SINT)
 	{

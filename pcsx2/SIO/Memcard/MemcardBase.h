@@ -20,11 +20,6 @@ protected:
 	std::string path;
 	std::chrono::time_point<std::chrono::system_clock> lastWriteTime;
 	std::chrono::time_point<std::chrono::system_clock> lastReadTime;
-	// Decremented once per frame if nonzero, indicates how many more frames must pass before
-	// memcards are considered "no longer being written to". Used as a way to detect if it is
-	// unsafe to shutdown the VM due to memcard access.
-	std::atomic_uint32_t currentBusyTicks = 0;
-	uint32_t lastBusyFrame = 0;
 
 public:
 	MemcardBase(u32 unifiedSlot, std::string path);
@@ -35,11 +30,6 @@ public:
 	
 	void SendWriteMessageToHost();
 	void SendReadMessageToHost();
-
-	void TickBusy();
-	void SetBusy();
-	bool IsBusy();
-	bool IsPastSaveStateThreshold();
 
 	virtual Memcard::Type GetType() = 0;
 	// Look up the host associated with this emulated memcard, and check that its size

@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include "StateWrapper.h"
+
 #include <vector>
 
 class MemcardBase;
@@ -43,7 +45,7 @@ namespace Memcard
 		Memcard::HostType hostType;
 		s64 size;
 		bool formatted;
-	};
+	};#include "StateWrapper.h"
 
 	enum class Command : u8
 	{
@@ -86,11 +88,16 @@ namespace Memcard
 	MemcardBase* GetMemcard(const u32 unifiedSlot);
 	MemcardBase* GetMemcard(const u32 port, const u32 slot);
 
+	void TickBusy();
+	void SetBusy();
+	bool IsBusy();
+	void CheckAndNotifySaveStateDependency();
+
 	Memcard::Type GetMemcardType(std::string fullPath);
 	std::vector<Memcard::AvailableMemcardSummary> GetAvailableMemcards(bool includeInUse);
-	bool IsBusy();
+
 	const std::vector<std::string>& GetFilters();
 	void SetFilters(const std::vector<std::string> newFilters);
 
-	void Freeze();
+	bool DoState(StateWrapper& sw);
 } // namespace Memcard

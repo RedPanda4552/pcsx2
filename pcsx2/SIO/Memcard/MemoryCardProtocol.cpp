@@ -6,6 +6,7 @@
 #include "SIO/Sio.h"
 #include "SIO/Sio2.h"
 #include "SIO/Sio0.h"
+#include "SIO/Memcard/Memcard.h"
 
 #include "common/Assertions.h"
 #include "common/Console.h"
@@ -231,7 +232,7 @@ void MemoryCardProtocol::WriteData()
 
 	ReadWriteIncrement(writeLength);
 
-	//MemcardBusy::SetBusy();
+	Memcard::SetBusy();
 }
 
 void MemoryCardProtocol::ReadData()
@@ -396,7 +397,7 @@ u8 MemoryCardProtocol::PS1Write(u8 data)
 	g_Sio0.SetAcknowledge(sendAck);
 	ps1McState.currentByte++;
 
-	//MemcardBusy::SetBusy();
+	Memcard::SetBusy();
 	return ret;
 }
 
@@ -421,7 +422,7 @@ void MemoryCardProtocol::EraseBlock()
 	mcd->EraseBlock();
 	The2bTerminator(4);
 
-	//MemcardBusy::SetBusy();
+	Memcard::SetBusy();
 }
 
 void MemoryCardProtocol::UnknownBoot()

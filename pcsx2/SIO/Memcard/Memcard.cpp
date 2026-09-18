@@ -14,12 +14,18 @@
 
 #include "Config.h"
 #include "Common.h"
+#include "Counters.h"
 #include "common/Path.h"
 #include "common/FileSystem.h"
 #include "Host.h"
 #include "IconsPromptFont.h"
 
 #include <memory>
+
+// Number of frames a memory card should be considered busy for after doing a write operation.
+constexpr u32 MEMCARD_BUSY_TICKS = 300;
+// Number of frames after which saving a savestate should warn about not using savestates for permanent storage.
+constexpr u32 SAVESTATE_DEPENDENCY_TICKS = 60 * 60 * 60 * 2;
 
 // Private items we don't want exposed directly in the Memcard.h header
 namespace Memcard
@@ -28,6 +34,15 @@ namespace Memcard
 
 	// Filters are universal to all (folder) memcards, store them at top level.
 	static std::vector<std::string> filters;
+
+	// Decremented once per frame if nonzero, indicates how many more frames must pass before
+	// memcards are considered "no longer being written to". Used as a way to detect if it is
+	// unsafe to shutdown the VM due to memcard access.
+	std::atomic_uint32_t currentBusyTicks = 0;
+
+	// Stores the last frame number that a memcard operation occurred on. Used to determine
+	// if the user should be notified that they have not saved in a while after using a savestate.
+	u32 lastBusyFrame = 0;
 } // namespace Memcard
 
 bool Memcard::Initialize(std::vector<std::string> filters)
@@ -224,6 +239,38 @@ MemcardBase* Memcard::GetMemcard(const u32 port, const u32 slot)
 	return s_memcards.at(unifiedSlot).get();
 }
 
+void Memcard::TickBusy()
+{
+	if (Memcard::currentBusyTicks.load(std::memory_order_relaxed) == 0)
+	{
+		return;
+	}
+
+	Memcard::currentBusyTicks.fetch_sub(1, std::memory_order_release);
+}
+
+void Memcard::SetBusy()
+{
+	Memcard::currentBusyTicks.store(MEMCARD_BUSY_TICKS, std::memory_order_release);
+	Memcard::lastBusyFrame = g_FrameCount;
+}
+
+bool Memcard::IsBusy()
+{
+	return (Memcard::currentBusyTicks.load(std::memory_order_acquire) > 0);
+}
+
+// Compare current frame counter to the last frame that a save operation occurred on.
+// If the gap exceeds our expected amount, notify the user.
+void Memcard::CheckAndNotifySaveStateDependency()
+{
+	if (g_FrameCount - Memcard::lastBusyFrame > SAVESTATE_DEPENDENCY_TICKS)
+	{
+		Host::AddIconOSDMessage("MemcardBusy", ICON_PF_MEMORY_CARD,
+								TRANSLATE_SV("MemoryCard", "The virtual console hasn't saved to your memory card in a long time.\nSavestates should not be used in place of in-game saves."), Host::OSD_INFO_DURATION);
+	}
+}
+
 // Resolve what type of emulated memcard a host file/folder is representing.
 Memcard::Type Memcard::GetMemcardType(std::string fullPath)
 {
@@ -347,21 +394,6 @@ std::vector<Memcard::AvailableMemcardSummary> Memcard::GetAvailableMemcards(bool
 	return summaries;
 }
 
-bool Memcard::IsBusy()
-{
-	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
-	{
-		MemcardBase* memcard = s_memcards.at(i).get();
-
-		if (memcard->IsBusy())
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
 const std::vector<std::string>& Memcard::GetFilters()
 {
 	return Memcard::filters;
@@ -372,16 +404,21 @@ void Memcard::SetFilters(const std::vector<std::string> newFilters)
 	Memcard::filters = newFilters;
 }
 
-void Memcard::Freeze()
+bool Memcard::DoState(StateWrapper& sw)
 {
+	if (sw.IsWriting())
+	{
+		Memcard::CheckAndNotifySaveStateDependency();
+	}
+
+
+
+/*
 	for (u32 i = 0; i < Memcard::MAX_SLOTS; i++)
 	{
 		MemcardBase* memcard = s_memcards.at(i).get();
 
-		if (memcard->IsPastSaveStateThreshold())
-		{
-			Host::AddIconOSDMessage("MemcardSaveStateThreshold", ICON_PF_MEMORY_CARD,
-			TRANSLATE_SV("MemoryCard", "The virtual console hasn't saved to your memory card in a long time.\nSavestates should not be used in place of in-game saves."), Host::OSD_INFO_DURATION);
-		}
+
 	}
+*/
 }
